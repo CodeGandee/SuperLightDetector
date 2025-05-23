@@ -1,0 +1,12 @@
+crops/
+dataset_backup/
+label_data/
+label_data_dataset/
+__pycache__/
+/script/*.pt
+/script/label_data_PR
+/script/runs
+/script/*log
+/script/*ttf
+/script/.cometml-runs
+temp_reorganize/
