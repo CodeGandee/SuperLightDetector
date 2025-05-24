@@ -12,7 +12,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('quick_test.log'),
+        logging.FileHandler('./logs/quick_test.log'),
         logging.StreamHandler(sys.stdout)
     ]
 )
@@ -25,8 +25,14 @@ output_dir.mkdir(exist_ok=True)
 
 # 要测试的模型（只选择确定可用的）
 models_to_test = [
-    "yolov8n",
-    "yolov11n", 
+    "YOLOv7n", 
+    "yolov6n",
+    "yolov4n",
+    "yolov3n",
+    "yolov2n",
+    "yolov1n"
+
+    
 ]
 
 def quick_test_model(model_name):
@@ -35,15 +41,15 @@ def quick_test_model(model_name):
     
     try:
         # 加载并快速训练模型
-        model = YOLO(f"{model_name}.pt")
+        model = YOLO(f"./models/{model_name}.pt")
         logger.info(f"✅ 模型 {model_name} 加载成功")
         
         # 快速训练（很少的轮数）
         train_results = model.train(
-            data="label_data.yaml",
+            data="label_data_dataset/dataset.yaml",
             epochs=10,  # 只训练10轮进行快速测试
             imgsz=640,
-            device="2,3",
+            device="6,7",
             batch=4,
             verbose=False,
             plots=False,

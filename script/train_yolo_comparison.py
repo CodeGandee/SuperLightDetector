@@ -111,7 +111,7 @@ def train_and_evaluate_model(model_name):
         train_results = model.train(
             data="label_data.yaml",
             epochs=200,  # 减少轮数以快速比较
-            imgsz=640,
+            imgsz=320,
             device="2,3",
             batch=4,
             lr0=0.001,

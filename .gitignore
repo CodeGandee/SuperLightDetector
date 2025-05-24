@@ -10,3 +10,16 @@ __pycache__/
 /script/*ttf
 /script/.cometml-runs
 temp_reorganize/
+models/
+/script/quick_test_results/
+Fonts/
+logs/
+mlruns/
+experiments/
+quick_test_results
+runs/
+single_class_dataset/
+.cometml-runs/
+annotations_coco/
+annotations_yolo/
+overfit_label_data_dataset/
