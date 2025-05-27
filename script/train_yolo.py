@@ -52,11 +52,7 @@ output_dir.mkdir(exist_ok=True)
 
 # 定义要测试的模型版本
 model_versions = [
-    "yolov8n",  # YOLOv8n (确保存在)
-    "yolov5n",  # YOLOv5n
-    "yolov9n",  # YOLOv9n (如果存在)
-    "yolov10n", # YOLOv10n (如果存在)
-    "yolov11n", # YOLOv11n (如果存在)
+    "yolov5nu",   # YOLOv5n ultralytics version
 ]
 
 # 存储所有模型的结果
@@ -75,13 +71,13 @@ def train_and_evaluate_model(model_name):
     
     try:
         # 加载模型
-        model = YOLO(f"{model_name}.pt")
+        model = YOLO(f"./models/{model_name}.pt")
         log_and_print(f"成功加载模型: {model_name}.pt")
         
         # 训练模型
         log_and_print(f"开始训练 {model_name}...")
         train_results = model.train(
-            data="label_data.yaml",
+            data="label_data_dataset/dataset.yaml",
             epochs=100,  # 减少轮数以便快速比较多个模型
             imgsz=640,
             device="2,3",
@@ -107,7 +103,7 @@ def train_and_evaluate_model(model_name):
             save=True,
             plots=True,
             verbose=False,  # 减少输出
-            project="training_outputs",
+            project="./logs/training_outputs",
             name=f"{model_name}_comparison",
             exist_ok=True,
             pretrained=True,

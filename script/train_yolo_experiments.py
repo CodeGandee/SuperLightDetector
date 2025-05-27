@@ -395,6 +395,104 @@ class YOLOExperiment:
 
     def _create_heatmaps(self):
         """Create heatmaps for each metric with model parameters and FLOPs"""
+        
+        # Determine if it's a single-model case
+        all_model_names = set()
+        first_non_empty_df_for_columns = None
+        for df_check in self.results.values():
+            if not df_check.empty:
+                all_model_names.update(df_check.index.tolist())
+                if first_non_empty_df_for_columns is None:
+                    first_non_empty_df_for_columns = df_check
+        
+        is_single_model_case = len(all_model_names) == 1
+        
+        if is_single_model_case and first_non_empty_df_for_columns is not None:
+            single_model_name = list(all_model_names)[0]
+            logger.info(f"Single model case detected: {single_model_name}. Generating combined metrics heatmap.")
+
+            data_for_heatmap = {}
+            common_epochs = first_non_empty_df_for_columns.columns.tolist()
+
+            for metric, df_metric_data in self.results.items():
+                if not df_metric_data.empty and single_model_name in df_metric_data.index:
+                    # Ensure the series is aligned with common_epochs
+                    metric_series = df_metric_data.loc[single_model_name].reindex(common_epochs)
+                    data_for_heatmap[metric] = metric_series
+            
+            if not data_for_heatmap:
+                logger.warning(f"No data found for single model {single_model_name} to create combined heatmap.")
+                # Fallback to original behavior or simply return
+                # For now, let's try to make sure the original loop doesn't run if this was triggered.
+                # However, if data_for_heatmap is empty, maybe we should let the original loop try.
+                # Let's proceed assuming if is_single_model_case is true, this is the desired plot.
+                # If data_for_heatmap is empty, then an empty plot or error will occur below.
+                # This needs careful handling if no data means use old method.
+                # For now, if it's a single model name, it *must* be plotted this way or not at all.
+                if not data_for_heatmap:
+                    logger.warning(f"No metric data for {single_model_name}, cannot create combined heatmap.")
+                    return
+
+
+            combined_heatmap_df = pd.DataFrame(data_for_heatmap) # Metrics are columns, epochs are index
+            if combined_heatmap_df.empty:
+                logger.warning(f"Combined DataFrame for {single_model_name} is empty. Skipping heatmap.")
+                return
+            combined_heatmap_df = combined_heatmap_df.T # Metrics are rows, epochs are columns
+
+            if combined_heatmap_df.empty: # Check again after transpose
+                logger.warning(f"Transposed combined DataFrame for {single_model_name} is empty. Skipping heatmap.")
+                return
+
+            num_epochs = len(common_epochs)
+            num_metrics = len(combined_heatmap_df.index)
+            fig_width = max(15, num_epochs * 0.6)
+            fig_height = max(8, num_metrics * 1.0)
+
+            plt.figure(figsize=(fig_width, fig_height))
+            
+            try:
+                sns.heatmap(
+                    combined_heatmap_df,
+                    annot=True,
+                    fmt='.3f', 
+                    cmap='YlOrRd',
+                    cbar_kws={'label': 'Metric Value'},
+                    annot_kws={'size': 8}
+                )
+                
+                model_params_str, model_flops_str = "", ""
+                if single_model_name in self.model_info:
+                    params, flops = self.model_info[single_model_name]["params"], self.model_info[single_model_name]["flops"]
+                    model_params_str = f"{params/1e6:.1f}M" if params >= 1e6 else f"{params/1e3:.1f}K"
+                    model_flops_str = f"{flops/1e9:.1f}G" if flops >= 1e9 else f"{flops/1e9:.1f}G"
+                
+                title = f"{self.experiment_name} - Metrics for {single_model_name}"
+                if model_params_str and model_flops_str:
+                    title += f" ({model_params_str} params, {model_flops_str} FLOPs)"
+                
+                plt.title(title, fontproperties=self.chinese_font, fontsize=12)
+                plt.xlabel("Epochs", fontproperties=self.chinese_font, fontsize=10)
+                plt.ylabel("Metrics", fontproperties=self.chinese_font, fontsize=10)
+                
+                ax = plt.gca()
+                ax.set_yticklabels(combined_heatmap_df.index, fontproperties=self.chinese_font, verticalalignment='center', fontsize=9, rotation=0)
+                plt.xticks(rotation=45, fontsize=8)
+                
+                plt.tight_layout()
+                save_path = self.output_dir / f"{single_model_name}_combined_metrics_heatmap.png"
+                plt.savefig(save_path, dpi=300, bbox_inches='tight', format='png')
+                if self.mlflow_run: # Check if mlflow run is active
+                    mlflow.log_artifact(str(save_path))
+                logger.info(f"Saved combined heatmap for {single_model_name} to {save_path}")
+                
+            except Exception as e:
+                logger.error(f"Error creating combined heatmap for {single_model_name}: {str(e)}")
+            finally:
+                plt.close()
+            return # Important: return after handling the single model case
+
+        # Original multi-model plotting logic
         for metric, df in self.results.items():
             # Skip if dataframe is empty
             if df.empty:
@@ -421,7 +519,7 @@ class YOLOExperiment:
                         params, flops = self.model_info[model_name]["params"], self.model_info[model_name]["flops"]
                         # Format numbers for better readability
                         params_str = f"{params/1e6:.1f}M" if params >= 1e6 else f"{params/1e3:.1f}K"
-                        flops_str = f"{flops/1e9:.1f}G" if flops >= 1e9 else f"{flops/1e6:.1f}M"
+                        flops_str = f"{flops/1e9:.1f}G" if flops >= 1e9 else f"{flops/1e9:.1f}G"
                         model_line = f"{model_name}".center(40)
                         params_line = f"({params_str} params, {flops_str} FLOPs)".center(40)
                         y_labels.append(f"{model_line}\n{params_line}")
@@ -445,16 +543,37 @@ class YOLOExperiment:
                 plt.tight_layout()
                 plt.savefig(
                     self.output_dir / f"{metric}_heatmap.png",
-                    dpi=300,  # 300 DPI的高质量输出
+                    dpi=300,  # High quality output
                     bbox_inches='tight',
                     format='png'
                 )
-                mlflow.log_artifact(str(self.output_dir / f"{metric}_heatmap.png"))
+                if self.mlflow_run: # Check if mlflow run is active
+                    mlflow.log_artifact(str(self.output_dir / f"{metric}_heatmap.png"))
                 
             except Exception as e:
                 logger.error(f"Error creating heatmap for {metric}: {str(e)}")
             finally:
                 plt.close()
+
+    def _check_mlflow_connection(self):
+        """检查MLflow连接状态"""
+        try:
+            # Check if an active run exists, if not, try to get experiment
+            if mlflow.active_run():
+                return True
+            mlflow.get_experiment_by_name(self.experiment_name) #This might create if not exists with some backends
+            return True
+        except Exception as e:
+            logger.error(f"MLflow connection error: {str(e)}")
+            return False
+
+    def _handle_mlflow_error(self):
+        # Ensure MLflow run is ended
+        if self.mlflow_run:
+            try:
+                mlflow.end_run()
+            except Exception as e:
+                logger.warning(f"Error ending MLflow run: {str(e)}")
 
 def main():
     # Create experiments
@@ -475,9 +594,18 @@ def main():
         finally:
             # Ensure MLflow run is ended
             try:
-                mlflow.end_run()
+                exp._handle_mlflow_error()
             except Exception as e:
                 logger.warning(f"Error ending MLflow run: {str(e)}")
 
 if __name__ == "__main__":
+    # Add a check for MLflow run status before calling main operations
+    # This is a simplified example; a robust solution might involve a global MLflow utility
+    # For YOLOExperiment, mlflow is initialized in __init__
+    
+    # Example:
+    # if not YOLOExperiment._check_mlflow_connection_static(): # A static method if needed before __init__
+    #     logger.error("MLflow is not available. Exiting.")
+    #     # sys.exit(1) # Or handle gracefully
+    
     main() 

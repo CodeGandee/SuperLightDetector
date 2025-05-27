@@ -18,6 +18,7 @@ import yaml
 import matplotlib.font_manager as fm
 import subprocess
 import sys
+from contextlib import nullcontext
 
 # Configure logger
 logger.remove()  # Remove default handler
@@ -41,56 +42,73 @@ class OtherExperiment:
         self.dataset_path = Path(dataset_path)
         logger.info(f'self.dataset_path/n:{self.dataset_path}')
         self.single_class = single_class
-        self.output_dir = Path(f"experiments/{experiment_name}")
+        self.output_dir = Path(f"/nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/experiments/{experiment_name}")
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
         # Model versions with environment names
         self.model_versions = {
-            'yolo_fastestv2': {
-                'name': 'Yolo-FastestV2',
-                'repo': 'https://github.com/dog-qiuqiu/Yolo-FastestV2',
-                'branch': 'main',
-                'env_name': 'yolo_fastestv2_env',
-                'python_version': '3.8'
-            },
+            # 'yolo_fastestv2': {
+            #     'name': 'Yolo-FastestV2',
+            #     'repo': 'https://github.com/dog-qiuqiu/Yolo-FastestV2',
+            #     'branch': 'main',
+            #     'env_name': 'yolo_fastestv2_env',
+            #     'python_version': '3.8'
+            # },
             'nanodet': {
                 'name': 'NanoDet',
                 'repo': 'https://github.com/RangiLyu/nanodet',
                 'branch': 'main',
                 'env_name': 'nanodet_env',
                 'python_version': '3.8'
-            },
-            'picodet': {
-                'name': 'PicoDet',
-                'repo': 'https://github.com/PaddlePaddle/PaddleDetection',
-                'branch': 'develop',
-                'config': 'configs/picodet/picodet_s_320_coco.yml',
-                'env_name': 'picodet_env',
-                'python_version': '3.8'
-            },
-            'yolox_nano': {
-                'name': 'YOLOX-Nano',
-                'repo': 'https://github.com/Megvii-BaseDetection/YOLOX',
-                'branch': 'main',
-                'config': 'exps/yolox_nano.py',
-                'env_name': 'yolox_nano_env',
-                'python_version': '3.8'
-            },
-            'yolov5_nano': {
-                'name': 'YOLOv5-Nano',
-                'repo': 'https://github.com/ultralytics/yolov5',
-                'branch': 'master',
-                'config': 'models/yolov5n.yaml',
-                'env_name': 'yolov5_nano_env',
-                'python_version': '3.8'
             }
+            # 'picodet': {
+            #     'name': 'PicoDet',
+            #     'repo': 'https://github.com/PaddlePaddle/PaddleDetection',
+            #     'branch': 'develop',
+            #     'config': 'configs/picodet/picodet_s_320_coco.yml',
+            #     'env_name': 'picodet_env',
+            #     'python_version': '3.8'
+            # },
+            # 'yolox_nano': {
+            #     'name': 'YOLOX-Nano',
+            #     'repo': 'https://github.com/Megvii-BaseDetection/YOLOX',
+            #     'branch': 'main',
+            #     'config': 'exps/yolox_nano.py',
+            #     'env_name': 'yolox_nano_env',
+            #     'python_version': '3.8'
+            # },
+            # 'yolov5_nano': {
+            #     'name': 'YOLOv5-Nano',
+            #     'repo': 'https://github.com/ultralytics/yolov5',
+            #     'branch': 'master',
+            #     'config': 'models/yolov5n.yaml',
+            #     'env_name': 'yolov5_nano_env',
+            #     'python_version': '3.8'
+            # }
         }
         
         # Store current conda environment
         self.current_env = self._get_current_conda_env()
         
         # Initialize MLflow
-        mlflow.set_experiment(experiment_name)
+        try:
+            # 检查实验是否存在，不存在则创建
+            experiment = mlflow.get_experiment_by_name(experiment_name)
+            if experiment is None:
+                experiment_id = mlflow.create_experiment(experiment_name)
+            else:
+                experiment_id = experiment.experiment_id
+            
+            # 设置当前实验
+            mlflow.set_experiment(experiment_name)
+            
+            # 创建新的运行
+            self.mlflow_run = mlflow.start_run(run_name=f"{experiment_name}_overview")
+            
+        except Exception as e:
+            logger.error(f"Error initializing MLflow: {str(e)}")
+            # 如果MLflow初始化失败，设置一个标志
+            self.mlflow_run = None
         
         # Initialize results storage
         self.results = {
@@ -221,6 +239,8 @@ class OtherExperiment:
                     'conda', 'run', '-n', env_name,
                     'pip', 'install', 'mlflow'
                 ], check=True)
+            else:
+                logger.info(f"Conda environment {env_name} already exists,skipping...")
             
             return env_name
             
@@ -268,53 +288,77 @@ class OtherExperiment:
                     ],
                     check=True
                 )
+        else:
+            logger.info(f"{model_info['name']} repository already exists, skipping...")
         
         return repo_dir
 
     def train_and_evaluate(self):
         """Train and evaluate models"""
-        # Log dataset statistics in a parent run
-        with mlflow.start_run(run_name=f"{self.experiment_name}_overview"):
-            mlflow.log_dict(self.dataset_stats, "dataset_stats.json")
-        
-        for model_key, model_info in tqdm(self.model_versions.items(), desc="Training models"):
-            # Create a separate run for each model
-            with mlflow.start_run(run_name=f"{self.experiment_name}_{model_key}", nested=True):
+        try:
+            # 使用with语句确保MLflow运行正确结束
+            with mlflow.start_run(run_name=f"{self.experiment_name}_overview", nested=True) if self.mlflow_run else nullcontext():
+                # 记录数据集统计信息
+                if self.mlflow_run:
+                    mlflow.log_dict(self.dataset_stats, "dataset_stats.json")
+                
+                for model_key, model_info in tqdm(self.model_versions.items(), desc="Training models"):
+                    try:
+                        # 为每个模型创建新的运行
+                        with mlflow.start_run(run_name=f"{self.experiment_name}_{model_key}", nested=True) if self.mlflow_run else nullcontext():
+                            # Setup conda environment
+                            env_name = self._setup_conda_env(model_key)
+                            
+                            # Setup model repository
+                            repo_dir = self._setup_model_repo(model_key)
+                            
+                            # Get model info
+                            params, flops = self._get_model_info(repo_dir)
+                            
+                            # Log model info
+                            mlflow.log_params({
+                                "model_name": model_info['name'],
+                                "parameters": params,
+                                "flops": flops
+                            })
+                            
+                            # Train model using the model's conda environment
+                            if model_key == 'yolo_fastestv2':
+                                self._train_yolo_fastestv2(repo_dir, env_name)
+                            elif model_key == 'nanodet':
+                                self._train_nanodet(repo_dir, env_name)
+                            elif model_key == 'picodet':
+                                self._train_picodet(repo_dir, env_name)
+                            elif model_key == 'yolox_nano':
+                                self._train_yolox_nano(repo_dir, env_name)
+                            elif model_key == 'yolov5_nano':
+                                self._train_yolov5_nano(repo_dir, env_name)
+                            
+                            # 在记录指标之前检查MLflow运行状态
+                            if self.mlflow_run:
+                                mlflow.log_metrics(metrics, step=epoch)
+                                mlflow.pytorch.log_model(
+                                    torch.load(model_path),
+                                    f"{model_key}_epoch_{epoch}",
+                                    registered_model_name=f"{model_key}_epoch_{epoch}"
+                                )
+                            
+                    except Exception as e:
+                        logger.error(f"Error training {model_info['name']}: {str(e)}")
+                        continue
+            
+            # Create and save heatmaps
+            self._create_heatmaps()
+            
+        except Exception as e:
+            logger.error(f"Error in experiment {self.experiment_name}: {str(e)}")
+        finally:
+            # 确保MLflow运行正确结束
+            if self.mlflow_run:
                 try:
-                    # Setup conda environment
-                    env_name = self._setup_conda_env(model_key)
-                    
-                    # Setup model repository
-                    repo_dir = self._setup_model_repo(model_key)
-                    
-                    # Get model info
-                    params, flops = self._get_model_info(repo_dir)
-                    
-                    # Log model info
-                    mlflow.log_params({
-                        "model_name": model_info['name'],
-                        "parameters": params,
-                        "flops": flops
-                    })
-                    
-                    # Train model using the model's conda environment
-                    if model_key == 'yolo_fastestv2':
-                        self._train_yolo_fastestv2(repo_dir, env_name)
-                    elif model_key == 'nanodet':
-                        self._train_nanodet(repo_dir, env_name)
-                    elif model_key == 'picodet':
-                        self._train_picodet(repo_dir, env_name)
-                    elif model_key == 'yolox_nano':
-                        self._train_yolox_nano(repo_dir, env_name)
-                    elif model_key == 'yolov5_nano':
-                        self._train_yolov5_nano(repo_dir, env_name)
-                    
+                    mlflow.end_run()
                 except Exception as e:
-                    logger.error(f"Error training {model_info['name']}: {str(e)}")
-                    continue
-        
-        # Create and save heatmaps
-        self._create_heatmaps()
+                    logger.warning(f"Error ending MLflow run: {str(e)}")
 
     def _train_yolo_fastestv2(self, repo_dir, env_name):
         """Train Yolo-FastestV2 model"""
@@ -414,80 +458,59 @@ class OtherExperiment:
             os.chdir(repo_dir)
             
             # Copy existing dataset.yaml
-            shutil.copy2(self.dataset_path / "dataset.yaml", "dataset.yaml")
-            
-            # Train model using the model's conda environment
-            logger.info(f"Training NanoDet model...")
-            results = subprocess.run(
-                self._activate_conda_env(env_name) + [
-                    'python', 'tools/train.py',
-                    'config/nanodet-m.yml',  # Using nano model configuration
-                    '--data', 'dataset.yaml',
-                    '--epochs', '200',
-                    '--batch-size', '4',
-                    '--img-size', '320',
-                    '--device', '6,7',
-                    '--workers', '8',
-                    '--project', str(self.output_dir),
-                    '--name', 'nanodet_training',
-                    '--exist-ok',
-                    '--pretrained',
-                    '--optimizer', 'AdamW',
-                    '--lr', '0.001',
-                    '--weight-decay', '0.0005',
-                    '--warmup-epochs', '3',
-                    '--warmup-momentum', '0.8',
-                    '--warmup-bias-lr', '0.1',
-                    '--box-loss-weight', '7.5',
-                    '--cls-loss-weight', '0.5',
-                    '--close-mosaic', '10',
-                    '--hsv-h', '0.015',
-                    '--hsv-s', '0.7',
-                    '--hsv-v', '0.4',
-                    '--degrees', '0.0',
-                    '--translate', '0.1',
-                    '--scale', '0.5',
-                    '--shear', '0.0',
-                    '--perspective', '0.0',
-                    '--flipud', '0.0',
-                    '--fliplr', '0.5',
-                    '--mosaic', '1.0',
-                    '--mixup', '0.0',
-                    '--copy-paste', '0.0',
-                    '--save-period', '10'  # Save model every 10 epochs
-                ],
-                check=True,
-                capture_output=True,
-                text=True
-            )
-            
-            # Log training output
-            logger.info(results.stdout)
-            if results.stderr:
-                logger.warning(results.stderr)
+            # shutil.copy2(self.dataset_path / "dataset.yaml", "dataset.yaml")
+            last_checkpoint = self.output_dir / 'nanodet_training' / 'weight' / 'model_epoch_199.ckpt'
+            if not last_checkpoint.exists():
+                # Train model using the model's conda environment
+                logger.info(f"Training NanoDet model...")
+                results = subprocess.run(
+                    self._activate_conda_env(env_name) + [
+                        'python', 'tools/train.py',
+                        'config/nanodet-plus-m_320-yolo.yml'  # Using our custom config
+                    ],
+                    check=True,
+                    capture_output=True,
+                    text=True
+                )
+                
+                # Log training output
+                logger.info(results.stdout)
+                if results.stderr:
+                    logger.warning(results.stderr)
+            else:
+                logger.info(f"Last checkpoint found, skipping training...")
             
             # Evaluate every 10 epochs
-            for epoch in range(10, 201, 10):
-                model_path = self.output_dir / 'nanodet_training' / f'weights/epoch{epoch}.pt'
+            for epoch in tqdm(range(9, 201, 10), desc="Evaluating NanoDet",colour='green'):
+                model_path = self.output_dir / 'nanodet_training' / f'weight/model_epoch_{epoch}.ckpt'
                 if model_path.exists():
                     eval_results = subprocess.run(
                         self._activate_conda_env(env_name) + [
                             'python', 'tools/test.py',
-                            '--data', 'dataset.yaml',
-                            '--weights', str(model_path),
-                            '--task', 'test'
+                            '--config', 'config/nanodet-plus-m_320-yolo.yml',
+                            '--model', str(model_path),
+                            '--save_dir_flag', f'test_{epoch}'
                         ],
                         check=True,
                         capture_output=True,
                         text=True
                     )
-                    
+                    test_results_path = self.output_dir / 'nanodet_training' / f'test_{epoch}' / 'eval_results.txt'
+                    if not test_results_path.exists():
+                        logger.warning(f"Test results file not found: {test_results_path}")
                     # Parse and log metrics
-                    metrics = self._parse_training_metrics(eval_results.stdout)
+                    metrics = self._parse_nanodet_test_metrics(test_results_path)
                     mlflow.log_metrics(metrics, step=epoch)
                     
                     # Update results dataframe
                     self._update_results('nanodet', metrics, epoch)
+                    
+                    # Log model artifact
+                    mlflow.pytorch.log_model(
+                        torch.load(model_path),
+                        f"nanodet_epoch_{epoch}",
+                        registered_model_name=f"nanodet_epoch_{epoch}"
+                    )
             
         except Exception as e:
             logger.error(f"Error training NanoDet: {str(e)}")
@@ -732,6 +755,38 @@ class OtherExperiment:
             # Change back to original directory
             os.chdir(self.output_dir.parent)
 
+    def _parse_nanodet_test_metrics(self, file_path):
+        """Parse NanoDet test metrics from eval_results.txt file"""
+        metrics = {
+            'mAP50': 0.0,
+            'mAP75': 0.0,
+            'mAP50_95': 0.0,
+            'train_speed': 0.0,
+            'inference_speed': 0.0
+        }
+        
+        try:
+            with open(file_path, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:  # Skip empty lines
+                        continue
+                        
+                    # Parse metrics from eval_results.txt
+                    if 'mAP' in line:
+                        metrics['mAP50_95'] = float(line.split(':')[-1].strip())
+                    elif 'AP_50' in line:
+                        metrics['mAP50'] = float(line.split(':')[-1].strip())
+                    elif 'AP_75' in line:
+                        metrics['mAP75'] = float(line.split(':')[-1].strip())
+                    # Note: train_speed and inference_speed are not available in eval_results.txt
+                    # They are set to 0.0 by default
+                    
+        except Exception as e:
+            logger.warning(f"Error parsing NanoDet metrics from {file_path}: {str(e)}")
+        
+        return metrics
+
     def _parse_training_metrics(self, output):
         """Parse training metrics from model output"""
         metrics = {}
@@ -965,12 +1020,32 @@ class OtherExperiment:
         logger.info(f"Val: {len(splits['val'][0])} images")
         logger.info(f"Test: {len(splits['test'][0])} images")
 
+    def _check_mlflow_connection(self):
+        """检查MLflow连接状态"""
+        try:
+            mlflow.get_experiment_by_name(self.experiment_name)
+            return True
+        except Exception as e:
+            logger.error(f"MLflow connection error: {str(e)}")
+            return False
+
+    def _handle_mlflow_error(self):
+        """处理MLflow错误"""
+        try:
+            # 尝试重新初始化MLflow
+            mlflow.set_tracking_uri("http://localhost:5000")  # 设置你的MLflow服务器地址
+            mlflow.set_experiment(self.experiment_name)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to recover MLflow connection: {str(e)}")
+            return False
+
 def main():
     # Create experiments
     experiments = [
         OtherExperiment("other_multiclass_detect", "/nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/label_data_dataset"),
-        OtherExperiment("other_singleclass_detect", "/nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/label_data_dataset", single_class=True),
-        OtherExperiment("other_overfit_experiment", "/nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/label_data_dataset")
+        OtherExperiment("other_sigleclass_detect", "/nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/single_class_dataset"),
+        OtherExperiment("other_overfit_experiment", "/nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/overfit_label_data_dataset")
     ]
     
     # Run experiments
