@@ -176,7 +176,7 @@ def create_composite_debug_image(pil_images_list, output_path_str, canvas_width=
     print(f"Debug: Composite debug image saved to {output_path}")
 
 
-def create_coco_splits(main_coco_path_str, yolo_dir_str, output_dir_str, debug_enabled=False, num_debug_samples_per_split=2):
+def create_coco_splits(main_coco_path_str, yolo_dir_str, output_dir_str, debug_enabled=False, num_debug_samples_per_split=2,base_class_id=1):
     main_coco_path = Path(main_coco_path_str)
     yolo_dir = Path(yolo_dir_str)
     output_dir = Path(output_dir_str)
@@ -213,7 +213,7 @@ def create_coco_splits(main_coco_path_str, yolo_dir_str, output_dir_str, debug_e
             for i, line in enumerate(f):
                 name = line.strip()
                 if name:
-                    coco_categories.append({"id": i + 1, "name": name, "supercategory": ""})
+                    coco_categories.append({"id": i + base_class_id, "name": name, "supercategory": ""})
         print(f"Loaded {len(coco_categories)} categories: {coco_categories}")
     except FileNotFoundError:
         print(f"ERROR: Category names file not found at {category_names_path}")
@@ -300,7 +300,7 @@ def create_coco_splits(main_coco_path_str, yolo_dir_str, output_dir_str, debug_e
                             # Ensure category_id is valid (present in our new coco_categories)
                             cat_exists = any(cat['id'] == new_ann_entry['category_id'] for cat in coco_categories)
                             if not cat_exists:
-                                # print(f"Warning: Annotation ID {original_ann['id']} for image {base_filename} has category_id {new_ann_entry['category_id']} which is not in the loaded categories. Skipping this annotation.")
+                                print(f"Warning: Annotation ID {original_ann['id']} for image {base_filename} has category_id {new_ann_entry['category_id']} which is not in the loaded categories. Skipping this annotation.")
                                 pass # Potentially noisy, can be enabled if needed
                                 continue
                             split_coco_annotations.append(new_ann_entry)
@@ -354,7 +354,8 @@ if __name__ == '__main__':
                         help='Directory to save the output COCO 2017 formatted dataset. Defaults to a new directory named <yolo_dir_name>_coco next to yolo_dir.')
     parser.add_argument('--debug', action='store_true', 
                         help='Enable debug mode. This will generate a composite image (debug.jpg) with 2 random annotated samples per split.')
-    
+    parser.add_argument('--base_class_id', type=int, default=1,
+                        help='this start base class id for yolo class ID for the COCO categories. Defaults to 1 means yolo class start same as coco class start')
     args = parser.parse_args()
     
     # Determine output directory
@@ -373,5 +374,6 @@ if __name__ == '__main__':
         yolo_dir_str=args.yolo_dir, 
         output_dir_str=str(output_dir_param.resolve()),
         debug_enabled=args.debug,
-        num_debug_samples_per_split=num_debug_samples if args.debug else 0
+        num_debug_samples_per_split=num_debug_samples if args.debug else 0,
+        base_class_id=args.base_class_id
     ) 
