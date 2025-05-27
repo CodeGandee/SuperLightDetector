@@ -25,3 +25,5 @@ annotations_yolo/
 overfit_label_data_dataset/
 single_class_dataset_yolo/
 overfit_label_data_dataset_yolo/
+annotations_yolo_coco/
+single_class_dataset_yolo_coco/

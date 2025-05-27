@@ -1,0 +1,2 @@
+python script/draw_png.py --base_path /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/experiments/other_sigleclass_detect/nanodet_training-lr001-ratio001
+python script/draw_png.py --base_path /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/experiments/other_overfit_experiment/nanodet_training-lr001-ratio001
