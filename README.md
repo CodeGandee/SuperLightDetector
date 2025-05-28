@@ -27,7 +27,7 @@ label_data_PRTest/
 
 ### 1. 多类别检测实验 (multiclass_detect)
 <div align="center">
-<img src="experiments/multiclass_detect/mAP50_heatmap.png" alt="多类别检测mAP50热力图" width="800"/>
+<img src="resources/experiments/multiclass_detect/mAP50_heatmap.png" alt="多类别检测mAP50热力图" width="800"/>
 </div>
 
 - 实验目的：评估不同模型在多类别目标检测任务上的性能
@@ -36,7 +36,7 @@ label_data_PRTest/
 
 ### 2. 单类别检测实验 (singleclass_detect)
 <div align="center">
-<img src="experiments/singleclass_detect/mAP50_heatmap.png" alt="单类别检测mAP50热力图" width="800"/>
+<img src="resources/experiments/singleclass_detect/mAP50_heatmap.png" alt="单类别检测mAP50热力图" width="800"/>
 </div>
 
 - 实验目的：评估模型在单类别检测任务上的性能表现
@@ -45,7 +45,7 @@ label_data_PRTest/
 
 ### 3. 过拟合实验 (overfit_experiment)
 <div align="center">
-<img src="experiments/overfit_experiment/mAP50_heatmap.png" alt="过拟合实验mAP50热力图" width="800"/>
+<img src="resources/experiments/overfit_experiment/mAP50_heatmap.png" alt="过拟合实验mAP50热力图" width="800"/>
 </div>
 
 - 实验目的：研究模型在小数据集上的过拟合现象
@@ -54,7 +54,7 @@ label_data_PRTest/
 
 ### 4. 其他模型多类别检测 (other_multiclass_detect)
 <div align="center">
-<img src="experiments/other_multiclass_detect/mAP50_heatmap.png" alt="其他模型多类别检测mAP50热力图" width="800"/>
+<img src="resources/experiments/other_multiclass_detect/mAP50_heatmap.png" alt="其他模型多类别检测mAP50热力图" width="800"/>
 </div>
 
 - 实验目的：评估非YOLO系列模型在多类别检测任务上的性能
@@ -63,7 +63,7 @@ label_data_PRTest/
 
 ### 5. 其他模型单类别检测 (other_sigleclass_detect)
 <div align="center">
-<img src="experiments/other_sigleclass_detect/mAP50_heatmap.png" alt="其他模型单类别检测mAP50热力图" width="800"/>
+<img src="resources/experiments/other_sigleclass_detect/mAP50_heatmap.png" alt="其他模型单类别检测mAP50热力图" width="800"/>
 </div>
 
 - 实验目的：评估轻量级模型在单类别检测任务上的性能
@@ -72,7 +72,7 @@ label_data_PRTest/
 
 ### 6. 其他模型过拟合实验 (other_overfit_experiment)
 <div align="center">
-<img src="experiments/other_overfit_experiment/mAP50_heatmap.png" alt="其他模型过拟合实验mAP50热力图" width="800"/>
+<img src="resources/experiments/other_overfit_experiment/mAP50_heatmap.png" alt="其他模型过拟合实验mAP50热力图" width="800"/>
 </div>
 
 - 实验目的：研究轻量级模型在小数据集上的过拟合特性
