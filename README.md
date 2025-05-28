@@ -20,6 +20,8 @@ label_data_PRTest/
 │   ├── other_sigleclass_detect/    # 其他模型单类别检测实验
 │   └── other_overfit_experiment/   # 其他模型过拟合实验
 ├── logs/               # 训练日志
+├── resources/          # 存放实验结果图片和其他资源文件
+│   └── experiments/    # 按实验类型分类存放的结果图片
 └── requirements.txt    # 项目依赖
 ```
 
