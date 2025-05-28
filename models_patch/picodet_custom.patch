@@ -1,0 +1,776 @@
+diff --git a/.gitignore b/.gitignore
+index 78555eaac..49a277e08 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -90,3 +90,4 @@ kernel_meta/
+ # MAC
+ *.DS_Store
+ 
++wandb/
+\ No newline at end of file
+diff --git a/configs/datasets/coco_detection_multi.yml b/configs/datasets/coco_detection_multi.yml
+new file mode 100644
+index 000000000..b92a848bd
+--- /dev/null
++++ b/configs/datasets/coco_detection_multi.yml
+@@ -0,0 +1,29 @@
++metric: COCO
++num_classes: 4
++
++TrainDataset:
++  name: COCODataSet
++  dataset_dir: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/annotations_yolo_coco
++  image_dir: train2017
++  anno_path: annotations/instances_train2017.json
++  data_fields: ['image', 'gt_bbox', 'gt_class', 'is_crowd']
++
++# EvalDataset:
++#   name: COCODataSet
++#   dataset_dir: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/annotations_yolo_coco
++#   image_dir: val2017
++#   anno_path: annotations/instances_val2017.json
++#   allow_empty: true
++
++EvalDataset:
++  name: COCODataSet
++  dataset_dir: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/annotations_yolo_coco
++  image_dir: test2017
++  anno_path: annotations/instances_test2017.json
++  allow_empty: true
++
++TestDataset:
++  name: COCODataSet
++  dataset_dir: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/annotations_yolo_coco
++  image_dir: test2017
++  anno_path: annotations/instances_test2017.json
+diff --git a/configs/datasets/coco_detection_overfit.yml b/configs/datasets/coco_detection_overfit.yml
+new file mode 100644
+index 000000000..52c8f1ff0
+--- /dev/null
++++ b/configs/datasets/coco_detection_overfit.yml
+@@ -0,0 +1,29 @@
++metric: COCO
++num_classes: 4
++
++TrainDataset:
++  name: COCODataSet
++  dataset_dir: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/annotations_yolo_coco
++  image_dir: train2017
++  anno_path: annotations/instances_train2017.json
++  data_fields: ['image', 'gt_bbox', 'gt_class', 'is_crowd']
++
++# EvalDataset:
++#   name: COCODataSet
++#   dataset_dir: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/annotations_yolo_coco
++#   image_dir: val2017
++#   anno_path: annotations/instances_val2017.json
++#   allow_empty: true
++
++EvalDataset:
++  name: COCODataSet
++  dataset_dir: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/annotations_yolo_coco
++  image_dir: train2017
++  anno_path: annotations/instances_train2017.json
++  allow_empty: true
++
++TestDataset:
++  name: COCODataSet
++  dataset_dir: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/annotations_yolo_coco
++  image_dir: test2017
++  anno_path: annotations/instances_test2017.json
+diff --git a/configs/datasets/coco_detection_sigle.yml b/configs/datasets/coco_detection_sigle.yml
+new file mode 100644
+index 000000000..586bf0a4f
+--- /dev/null
++++ b/configs/datasets/coco_detection_sigle.yml
+@@ -0,0 +1,29 @@
++metric: COCO
++num_classes: 1
++
++TrainDataset:
++  name: COCODataSet
++  dataset_dir: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/single_class_dataset_yolo_coco
++  image_dir: train2017
++  anno_path: annotations/instances_train2017.json
++  data_fields: ['image', 'gt_bbox', 'gt_class', 'is_crowd']
++
++# EvalDataset:
++#   name: COCODataSet
++#   dataset_dir: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/annotations_yolo_coco
++#   image_dir: val2017
++#   anno_path: annotations/instances_val2017.json
++#   allow_empty: true
++
++EvalDataset:
++  name: COCODataSet
++  dataset_dir: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/single_class_dataset_yolo_coco
++  image_dir: test2017
++  anno_path: annotations/instances_test2017.json
++  allow_empty: true
++
++TestDataset:
++  name: COCODataSet
++  dataset_dir: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/single_class_dataset_yolo_coco
++  image_dir: test2017
++  anno_path: annotations/instances_test2017.json
+diff --git a/configs/picodet/picodet_s_320_coco_lcnet.yml b/configs/picodet/picodet_s_320_coco_lcnet.yml
+index c9fb52f32..28c38e8d5 100644
+--- a/configs/picodet/picodet_s_320_coco_lcnet.yml
++++ b/configs/picodet/picodet_s_320_coco_lcnet.yml
+@@ -1,5 +1,5 @@
+ _BASE_: [
+-  '../datasets/coco_detection.yml',
++  '../datasets/coco_detection_multi.yml',
+   '../runtime.yml',
+   '_base_/picodet_v2.yml',
+   '_base_/optimizer_300e.yml',
+diff --git a/configs/picodet/picodet_xs_320_coco_lcnet.yml b/configs/picodet/picodet_xs_320_coco_lcnet.yml
+index 3b1b75313..b2661fa99 100644
+--- a/configs/picodet/picodet_xs_320_coco_lcnet.yml
++++ b/configs/picodet/picodet_xs_320_coco_lcnet.yml
+@@ -1,16 +1,17 @@
+ _BASE_: [
+-  '../datasets/coco_detection.yml',
++  '../datasets/coco_detection_multi.yml',
+   '../runtime.yml',
+   '_base_/picodet_v2.yml',
+   '_base_/optimizer_300e.yml',
+   '_base_/picodet_320_reader.yml',
+ ]
+-
+-pretrain_weights: https://paddledet.bj.bcebos.com/models/pretrained/LCNet_x0_35_pretrained.pdparams
+-weights: output/picodet_xs_320_coco/best_model
++# HACK: original is https://paddledet.bj.bcebos.com/models/pretrained/LCNet_x0_35_pretrained.pdparams
++pretrain_weights: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/models/picodet_xs_320_coco_lcnet.pdparams
++weights: weight
+ find_unused_parameters: True
+ use_ema: true
+-epoch: 300
++# HACK: original is 300
++epoch: 200
+ snapshot_epoch: 10
+ 
+ LCNet:
+@@ -33,13 +34,19 @@ PicoHeadV2:
+   feat_in_chan: 96
+ 
+ TrainReader:
+-  batch_size: 64
++# HACK : original is 64
++  batch_size: 4
+ 
+ LearningRate:
+-  base_lr: 0.32
++# HACK : original is 0.32
++# FIXME : 现在的base_lr不是按照对应的比例调整的,原有的是0.02
++  base_lr: 0.001
+   schedulers:
+   - !CosineDecay
+-    max_epochs: 300
++  # HACK : 这里修改了，原始是300
++    max_epochs: 200
+   - !LinearWarmup
+     start_factor: 0.1
+-    steps: 300
++  # HACK : 这里修改了，原始是300
++    steps: 100
++
+diff --git a/configs/picodet/picodet_xs_320_coco_lcnet_overfit.yml b/configs/picodet/picodet_xs_320_coco_lcnet_overfit.yml
+new file mode 100644
+index 000000000..4d0e494c8
+--- /dev/null
++++ b/configs/picodet/picodet_xs_320_coco_lcnet_overfit.yml
+@@ -0,0 +1,50 @@
++_BASE_: [
++  '../datasets/coco_detection_overfit.yml',
++  '../runtime.yml',
++  '_base_/picodet_v2.yml',
++  '_base_/optimizer_300e.yml',
++  '_base_/picodet_320_reader.yml',
++]
++# HACK: original is https://paddledet.bj.bcebos.com/models/pretrained/LCNet_x0_35_pretrained.pdparams
++pretrain_weights: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/models/picodet_xs_320_coco_lcnet.pdparams
++weights: weight
++find_unused_parameters: True
++use_ema: true
++# HACK: original is 300
++epoch: 200
++snapshot_epoch: 10
++
++LCNet:
++  scale: 0.35
++  feature_maps: [3, 4, 5]
++
++LCPAN:
++  out_channels: 96
++
++PicoHeadV2:
++  conv_feat:
++    name: PicoFeat
++    feat_in: 96
++    feat_out: 96
++    num_convs: 2
++    num_fpn_stride: 4
++    norm_type: bn
++    share_cls_reg: True
++    use_se: True
++  feat_in_chan: 96
++
++TrainReader:
++# HACK : original is 64
++  batch_size: 4
++
++LearningRate:
++# HACK : original is 0.32
++# FIXME : 现在的base_lr不是按照对应的比例调整的,原有的是0.02
++  base_lr: 0.001
++  schedulers:
++  - !CosineDecay
++    max_epochs: 300
++  - !LinearWarmup
++    start_factor: 0.1
++    steps: 300
++
+diff --git a/configs/picodet/picodet_xs_320_coco_lcnet_sigle.yml b/configs/picodet/picodet_xs_320_coco_lcnet_sigle.yml
+new file mode 100644
+index 000000000..d8d807be0
+--- /dev/null
++++ b/configs/picodet/picodet_xs_320_coco_lcnet_sigle.yml
+@@ -0,0 +1,51 @@
++_BASE_: [
++  '../datasets/coco_detection_sigle.yml',
++  '../runtime.yml',
++  '_base_/picodet_v2.yml',
++  '_base_/optimizer_300e.yml',
++  '_base_/picodet_320_reader.yml',
++]
++# HACK: original is https://paddledet.bj.bcebos.com/models/pretrained/LCNet_x0_35_pretrained.pdparams
++pretrain_weights: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/models/picodet_xs_320_coco_lcnet.pdparams
++weights: weight
++find_unused_parameters: True
++use_ema: true
++# HACK: original is 300
++epoch: 200
++snapshot_epoch: 10
++
++LCNet:
++  scale: 0.35
++  feature_maps: [3, 4, 5]
++
++LCPAN:
++  out_channels: 96
++
++PicoHeadV2:
++  conv_feat:
++    name: PicoFeat
++    feat_in: 96
++    feat_out: 96
++    num_convs: 2
++    num_fpn_stride: 4
++    norm_type: bn
++    share_cls_reg: True
++    use_se: True
++  feat_in_chan: 96
++
++TrainReader:
++# HACK : original is 64
++  batch_size: 4
++
++LearningRate:
++# HACK : original is 0.32
++# FIXME : 现在的base_lr不是按照对应的比例调整的,原有的是0.02
++  base_lr: 0.001
++  schedulers:
++  - !CosineDecay
++  # HACK : 这里修改了，原始是300
++    max_epochs: 200
++  - !LinearWarmup
++    start_factor: 0.1
++    steps: 300
++
+diff --git a/ppdet/engine/callbacks.py b/ppdet/engine/callbacks.py
+index 253da0fd3..5fe42fa12 100644
+--- a/ppdet/engine/callbacks.py
++++ b/ppdet/engine/callbacks.py
+@@ -23,6 +23,7 @@ import datetime
+ import six
+ import copy
+ import json
++import numpy as np
+ 
+ import paddle
+ import paddle.distributed as dist
+@@ -481,6 +482,9 @@ class WandbCallback(Callback):
+                 metrics["train/ips"] = ips
+                 metrics["train/data_cost"] = data_cost
+                 metrics["train/batch_cost"] = batch_cost
++                # HACK : 这里添加了学习率的记录，原始没有
++                # Add learning rate to metrics
++                metrics["train/learning_rate"] = float(status['learning_rate'])
+ 
+                 self.fps.append(ips)
+                 self.run.log(metrics)
+@@ -514,34 +518,93 @@ class WandbCallback(Callback):
+                 cost_time = status['cost_time']
+ 
+                 fps = sample_num / cost_time
+-
+-                merged_dict = {}
++                # HACK : 这里修改了，原始只记录map的值,这里value是np.ndarray数组
++                eval_metrics_to_log = {}
+                 for metric in self.model._metrics:
+-                    for key, map_value in metric.get_results().items():
+-                        merged_dict["eval/{}-mAP".format(key)] = map_value[0]
+-                merged_dict["epoch"] = status["epoch_id"]
+-                merged_dict["eval/fps"] = sample_num / cost_time
+-
+-                self.run.log(merged_dict)
++                    results = metric.get_results()
++                    
++                    if isinstance(results, dict):
++                        for key, value in results.items():
++                            if isinstance(value, list):
++                                # Handle list-type metrics (e.g., [mAP, AP50, AP75])
++                                for i, v in enumerate(value):
++                                    if i == 0:
++                                        eval_metrics_to_log[f"eval/{key}_mAP"] = float(v)
++                                    elif i == 1:
++                                        eval_metrics_to_log[f"eval/{key}_AP50"] = float(v)
++                                    elif i == 2:
++                                        eval_metrics_to_log[f"eval/{key}_AP75"] = float(v)
++                            elif isinstance(value, (float, int)):
++                                # Handle scalar metrics
++                                eval_metrics_to_log[f"eval/{key}"] = float(value)
++                            elif isinstance(value, np.ndarray):
++                                # Handle numpy array metrics
++                                if value.size >= 3:
++                                    eval_metrics_to_log[f"eval/{key}_mAP"] = float(value[0])
++                                    eval_metrics_to_log[f"eval/{key}_AP50"] = float(value[1]) 
++                                    eval_metrics_to_log[f"eval/{key}_AP75"] = float(value[2])
++                                else:
++                                    eval_metrics_to_log[f"eval/{key}"] = float(value[0])
++                            else:
++                                # Handle other types of metrics
++                                eval_metrics_to_log[f"eval/{key}"] = value
++                    elif isinstance(results, (float, int)):
++                        # Handle scalar results
++                        eval_metrics_to_log["eval/mAP"] = float(results)
++                    else:
++                        # Handle string results (e.g., "mAP: 0.xxx")
++                        try:
++                            if isinstance(results, str):
++                                parts = results.split(':')
++                                if len(parts) == 2:
++                                    key = parts[0].strip()
++                                    value = float(parts[1].strip())
++                                    eval_metrics_to_log[f"eval/{key}"] = value
++                        except Exception as e:
++                            logger.warning(f"Failed to parse metric result: {results}, error: {str(e)}")
++
++                eval_metrics_to_log["epoch"] = status["epoch_id"]
++                eval_metrics_to_log["eval/fps"] = fps
++
++                if eval_metrics_to_log:
++                    self.run.log(eval_metrics_to_log)
++                else:
++                    logger.warning("WandbCallback: No metrics extracted from metric.get_results() to log for eval mode.")
+ 
+                 if 'save_best_model' in status and status['save_best_model']:
+                     for metric in self.model._metrics:
+                         map_res = metric.get_results()
+-                        if 'pose3d' in map_res:
+-                            key = 'pose3d'
+-                        elif 'bbox' in map_res:
+-                            key = 'bbox'
+-                        elif 'keypoint' in map_res:
+-                            key = 'keypoint'
++                        if isinstance(map_res, dict):
++                            if 'bbox' in map_res:
++                                key = 'bbox'
++                                if isinstance(map_res[key], list):
++                                    ap_value = map_res[key][0]
++                                elif isinstance(map_res[key], np.ndarray):
++                                    ap_value = map_res[key][0]
++                                else:
++                                    ap_value = map_res[key][0]
++                            elif 'keypoint' in map_res:
++                                key = 'keypoint'
++                                if isinstance(map_res[key], list):
++                                    ap_value = map_res[key][0]
++                                elif isinstance(map_res[key], np.ndarray):
++                                    ap_value = map_res[key][0]
++                                else:
++                                    ap_value = map_res[key][0]
++                            else:
++                                key = 'mask'
++                                if isinstance(map_res[key], list):
++                                    ap_value = map_res[key][0]
++                                elif isinstance(map_res[key], np.ndarray):
++                                    ap_value = map_res[key][0]
++                                else:
++                                    ap_value = map_res[key][0]
+                         else:
+-                            key = 'mask'
+-                        if key not in map_res:
+-                            logger.warning("Evaluation results empty, this may be due to " \
+-                                        "training iterations being too few or not " \
+-                                        "loading the correct weights.")
++                            logger.warning("Evaluation results empty or in unexpected format")
+                             return
+-                        if map_res[key][0] >= self.best_ap:
+-                            self.best_ap = map_res[key][0]
++
++                        if ap_value >= self.best_ap:
++                            self.best_ap = ap_value
+                             save_name = 'best_model'
+                             tags = ["best", "epoch_{}".format(epoch_id)]
+ 
+diff --git a/tools/eval.sh b/tools/eval.sh
+new file mode 100755
+index 000000000..801437de6
+--- /dev/null
++++ b/tools/eval.sh
+@@ -0,0 +1,125 @@
++#!/bin/bash
++
++# 帮助信息函数
++show_help() {
++    echo "Usage: $0 [OPTIONS] <base_output_dir>"
++    echo "Options:"
++    echo "  -h, --help     Show this help message"
++    echo "  -c, --config   Specify the config file path (default: configs/picodet/picodet_xs_320_coco_lcnet.yml)"
++    echo ""
++    echo "Arguments:"
++    echo "  base_output_dir    Base directory containing the model weights"
++    echo ""
++    echo "Example:"
++    echo "  $0 -c configs/picodet/picodet_xs_320_coco_lcnet.yml /path/to/output"
++    echo "  $0 /path/to/output    # Use default config"
++}
++
++# 默认配置
++CONFIG_FILE="configs/picodet/picodet_xs_320_coco_lcnet.yml"
++BASE_OUTPUT_DIR=""
++
++# 参数解析
++while [[ $# -gt 0 ]]; do
++    case $1 in
++        -h|--help)
++            show_help
++            exit 0
++            ;;
++        -c|--config)
++            CONFIG_FILE="$2"
++            shift 2
++            ;;
++        *)
++            if [ -z "$BASE_OUTPUT_DIR" ]; then
++                BASE_OUTPUT_DIR="$1"
++            else
++                echo "Error: Unexpected argument: $1"
++                show_help
++                exit 1
++            fi
++            shift
++            ;;
++    esac
++done
++
++# 检查必要参数
++if [ -z "$BASE_OUTPUT_DIR" ]; then
++    echo "Error: Base output directory not provided"
++    show_help
++    exit 1
++fi
++
++# 检查配置文件是否存在
++if [ ! -f "$CONFIG_FILE" ]; then
++    echo "Error: Config file not found: $CONFIG_FILE"
++    exit 1
++fi
++
++echo "Using base output directory: $BASE_OUTPUT_DIR"
++echo "Using config file: $CONFIG_FILE"
++WEIGHTS_DIR="$BASE_OUTPUT_DIR"
++
++# Function to evaluate a single model
++evaluate_model() {
++    local epoch=$1
++    local output_name=$2
++    local weights_path="$WEIGHTS_DIR/${epoch}.pdparams"
++    local output_dir="$BASE_OUTPUT_DIR/test_${output_name}"
++    
++    echo "================================================"
++    echo "Evaluating model at epoch ${epoch}"
++    echo "================================================"
++    
++    # Run evaluation and capture output while also displaying it
++    eval_output=$(python tools/eval.py -c "$CONFIG_FILE" \
++                  -o weights="$weights_path" \
++                  --output_eval "$output_dir" 2>&1 | tee /dev/tty)
++    
++    # Extract metrics
++    map_value=$(echo "$eval_output" | grep "Average Precision  (AP) @\[ IoU=0.50:0.95 | area=   all | maxDets=100 \]" | sed -E 's/.*= ([0-9.]+).*/\1/')
++    ap50_value=$(echo "$eval_output" | grep "Average Precision  (AP) @\[ IoU=0.50      | area=   all | maxDets=100 \]" | sed -E 's/.*= ([0-9.]+).*/\1/')
++    ap75_value=$(echo "$eval_output" | grep "Average Precision  (AP) @\[ IoU=0.75      | area=   all | maxDets=100 \]" | sed -E 's/.*= ([0-9.]+).*/\1/')
++    ap_small_value=$(echo "$eval_output" | grep "Average Precision  (AP) @\[ IoU=0.50:0.95 | area= small | maxDets=100 \]" | sed -E 's/.*= ([0-9.-]+).*/\1/')
++    ap_m_value=$(echo "$eval_output" | grep "Average Precision  (AP) @\[ IoU=0.50:0.95 | area=medium | maxDets=100 \]" | sed -E 's/.*= ([0-9.-]+).*/\1/')
++    ap_l_value=$(echo "$eval_output" | grep "Average Precision  (AP) @\[ IoU=0.50:0.95 | area= large | maxDets=100 \]" | sed -E 's/.*= ([0-9.-]+).*/\1/')
++    
++    # Create output directory
++    mkdir -p "$output_dir"
++    
++    # Save results
++    cat > "$output_dir/eval_results.txt" << EOF
++mAP: $map_value
++AP_50: $ap50_value
++AP_75: $ap75_value
++AP_small: $ap_small_value
++AP_m: $ap_m_value
++AP_l: $ap_l_value
++EOF
++    
++    echo "Results saved to $output_dir/eval_results.txt"
++    echo ""
++}
++
++# Evaluate models from epoch 9 to 199 (every 10 epochs)
++for epoch in $(seq 9 10 199); do
++    if [ $epoch -eq 199 ]; then
++        # Handle the final model
++        weights_path="$WEIGHTS_DIR/model_final.pdparams"
++        if [ -f "$weights_path" ]; then
++            evaluate_model "model_final" "$epoch"
++        else
++            echo "Warning: model_final.pdparams not found at $weights_path"
++        fi
++    else
++        # Handle regular epoch models
++        weights_path="$WEIGHTS_DIR/${epoch}.pdparams"
++        if [ -f "$weights_path" ]; then
++            evaluate_model "$epoch" "$epoch"
++        else
++            echo "Warning: ${epoch}.pdparams not found at $weights_path"
++        fi
++    fi
++done
++
++echo "All evaluations completed!"
+\ No newline at end of file
+diff --git a/tools/eval_run.sh b/tools/eval_run.sh
+new file mode 100755
+index 000000000..4e0546ae5
+--- /dev/null
++++ b/tools/eval_run.sh
+@@ -0,0 +1,84 @@
++#!/bin/bash
++
++# 默认值设置
++eval_select="all"
++
++# 帮助信息函数
++show_help() {
++    echo "Usage: $0 [OPTIONS]"
++    echo "Options:"
++    echo "  -h, --help     Show this help message"
++    echo "  -t, --train    Evaluation mode selection:"
++    echo "                 0: Evaluate multi-class model only"
++    echo "                 1: Evaluate single-class model only"
++    echo "                 2: Evaluate overfit model only"
++    echo "                 all: Evaluate all models (default)"
++    echo ""
++    echo "Example:"
++    echo "  $0 -t 0    # Evaluate multi-class model only"
++    echo "  $0 -t 1    # Evaluate single-class model only"
++    echo "  $0 -t 2    # Evaluate overfit model only"
++    echo "  $0         # Evaluate all models (default)"
++}
++
++# 参数解析
++while [[ $# -gt 0 ]]; do
++    case $1 in
++        -h|--help)
++            show_help
++            exit 0
++            ;;
++        -t|--train)
++            eval_select="$2"
++            shift 2
++            ;;
++        *)
++            echo "Unknown option: $1"
++            show_help
++            exit 1
++            ;;
++    esac
++done
++
++# 验证参数
++if [[ "$eval_select" != "0" && "$eval_select" != "1" && "$eval_select" != "2" && "$eval_select" != "all" ]]; then
++    echo "Error: Invalid evaluation mode. Use 0 for multi-class, 1 for single-class, 2 for overfit, or 'all' for all."
++    show_help
++    exit 1
++fi
++
++# 评估多类模型的函数
++eval_multi_class() {
++    echo "Evaluating multi-class model..."
++    ./tools/eval.sh -c configs/picodet/picodet_xs_320_coco_lcnet.yml /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/experiments/other_multiclass_detect/picodet_training-lr0.001/
++}
++
++# 评估单类模型的函数
++eval_single_class() {
++    echo "Evaluating single-class model..."
++    ./tools/eval.sh -c configs/picodet/picodet_xs_320_coco_lcnet_sigle.yml /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/experiments/other_sigleclass_detect/picodet_training-lr0.001/
++}
++
++# 评估overfit模型的函数
++eval_overfit() {
++    echo "Evaluating overfit model..."
++    ./tools/eval.sh -c configs/picodet/picodet_xs_320_coco_lcnet_overfit.yml /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/experiments/other_overfit_experiment/picodet_training-lr0.001/
++}
++
++# 根据eval_select选择评估模式
++case "$eval_select" in
++    "0")
++        eval_multi_class
++        ;;
++    "1")
++        eval_single_class
++        ;;
++    "2")
++        eval_overfit
++        ;;
++    "all")
++        eval_multi_class
++        eval_single_class
++        eval_overfit
++        ;;
++esac
+\ No newline at end of file
+diff --git a/tools/train_run.sh b/tools/train_run.sh
+new file mode 100755
+index 000000000..0f49a4242
+--- /dev/null
++++ b/tools/train_run.sh
+@@ -0,0 +1,120 @@
++#!/bin/bash
++
++# 默认值设置
++train_select="all"
++
++# 帮助信息函数
++show_help() {
++    echo "Usage: $0 [OPTIONS]"
++    echo "Options:"
++    echo "  -h, --help     Show this help message"
++    echo "  -t, --train    Training mode selection:"
++    echo "                 0: Train multi-class dataset only"
++    echo "                 1: Train single-class dataset only"
++    echo "                 all: Train both datasets (default)"
++    echo ""
++    echo "Example:"
++    echo "  $0 -t 0    # Train multi-class dataset only"
++    echo "  $0 -t 1    # Train single-class dataset only"
++    echo "  $0 -t 2    # Train overfit dataset only"
++    echo "  $0         # Train both datasets (default)"
++}
++
++# 参数解析
++while [[ $# -gt 0 ]]; do
++    case $1 in
++        -h|--help)
++            show_help
++            exit 0
++            ;;
++        -t|--train)
++            train_select="$2"
++            shift 2
++            ;;
++        *)
++            echo "Unknown option: $1"
++            show_help
++            exit 1
++            ;;
++    esac
++done
++
++# 验证参数
++if [[ "$train_select" != "0" && "$train_select" != "1" && "$train_select" != "2" && "$train_select" != "all" ]]; then
++    echo "Error: Invalid training mode. Use 0 for multi-class, 1 for single-class, 2 for overfit, or 'all' for all."
++    show_help
++    exit 1
++fi
++
++export WANDB_PROJECT="PicoDet_Experiments" 
++
++# 训练多类数据集的函数
++train_multi_class() {
++    echo "Training multi-class dataset..."
++    export WANDB_RUN_GROUP="COCO_XS_320"
++    export WANDB_JOB_TYPE="train"
++    # export WANDB_NAME="MySpecificRun_LR0.02_Epoch200"
++    
++    export CUDA_VISIBLE_DEVICES=2,3
++    python -m paddle.distributed.launch --gpus 2,3 tools/train.py \
++        -c configs/picodet/picodet_xs_320_coco_lcnet.yml \
++        -o save_dir=/nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/experiments/other_multiclass_detect/picodet_training-lr0.001x0.1-warmup100/ \
++        --eval \
++        --use_wandb True \
++        # --use_vdl True \
++        # --vdl_log_dir /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/experiments/other_multiclass_detect/picodet_training/val_log
++}
++
++# 训练单类数据集的函数
++train_single_class() {
++    echo "Training single-class dataset..."
++    export WANDB_RUN_GROUP="COCO_XS_320_Sigle"
++    export WANDB_JOB_TYPE="train"
++    # export WANDB_NAME="MySpecificRun_LR0.02_Epoch200"
++    
++    export CUDA_VISIBLE_DEVICES=2,3
++    python -m paddle.distributed.launch --gpus 2,3 tools/train.py \
++        -c configs/picodet/picodet_xs_320_coco_lcnet_sigle.yml \
++        -o save_dir=/nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/experiments/other_sigleclass_detect/picodet_training-lr0.001/ \
++        --eval \
++        --use_wandb True \
++        # --use_vdl True \
++        # --vdl_log_dir /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/experiments/other_multiclass_detect/picodet_training/val_log
++}
++
++# 训练overfit数据集
++train_overfit() {
++    echo "Training overfit dataset..."
++    export WANDB_RUN_GROUP="COCO_XS_320_Overfit"
++    export WANDB_JOB_TYPE="train"
++    # export WANDB_NAME="MySpecificRun_LR0.02_Epoch200"
++    
++    export CUDA_VISIBLE_DEVICES=2,3
++    python -m paddle.distributed.launch --gpus 2,3 tools/train.py \
++        -c configs/picodet/picodet_xs_320_coco_lcnet.yml \
++        -o save_dir=/nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/experiments/other_overfit_experiment/picodet_training-lr0.001/ \
++        --eval \
++        --use_wandb True \
++        # --use_vdl True \
++        # --vdl_log_dir /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/experiments/other_multiclass_detect/picodet_training/val_log
++}
++
++# 根据train_select选择训练模式
++case "$train_select" in
++    "0")
++        train_multi_class
++        ;;
++    "1")
++        train_single_class
++        ;;
++    "2")
++        train_overfit
++        ;;
++    "all")
++        train_multi_class
++        train_single_class
++        train_overfit
++        ;;
++esac
++
++

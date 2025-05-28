@@ -8,6 +8,9 @@
 label_data_PRTest/
 ├── dataset/              # 存放实验数据集
 ├── models/              # 存放YOLO权重和其他检测模型
+│   ├── picodet/        # PaddleDetection子模块
+│   └── nanodet/        # NanoDet子模块
+├── models_patch/        # 存放模型修改的patch文件
 ├── script/              # 实验相关脚本
 │   ├── train_yolo_experiments.py    # YOLO系列模型训练和比较实验脚本
 │   ├── draw_png.py                  # 实验结果可视化脚本
@@ -20,10 +23,55 @@ label_data_PRTest/
 │   ├── other_sigleclass_detect/    # 其他模型单类别检测实验
 │   └── other_overfit_experiment/   # 其他模型过拟合实验
 ├── logs/               # 训练日志
-├── resources/          # 存放实验结果图片和其他资源文件
-│   └── experiments/    # 按实验类型分类存放的结果图片
 └── requirements.txt    # 项目依赖
 ```
+
+## 子模块说明
+
+本项目使用了两个子模块来管理第三方检测模型：
+
+1. **PaddleDetection (models/picodet)**
+   - 原始仓库：[PaddleDetection](https://github.com/PaddlePaddle/PaddleDetection)
+   - 当前分支：develop
+   - 自定义修改：见 `models_patch/picodet_custom.patch`
+
+2. **NanoDet (models/nanodet)**
+   - 原始仓库：[NanoDet](https://github.com/RangiLyu/nanodet)
+   - 当前分支：main
+   - 自定义修改：见 `models_patch/nanodet_custom.patch`
+
+### 如何还原自定义修改
+
+1. 首先克隆主仓库并初始化子模块：
+```bash
+git clone <repository_url>
+cd label_data_PRTest
+git submodule update --init --recursive
+```
+
+2. 切换到正确的分支：
+```bash
+# 切换到 PaddleDetection 的 develop 分支
+cd models/picodet
+git checkout develop
+
+# 切换到 NanoDet 的 main 分支
+cd ../nanodet
+git checkout main
+```
+
+3. 应用自定义修改：
+```bash
+# 应用 PaddleDetection 的修改
+cd models/picodet
+git apply ../../models_patch/picodet_custom.patch
+
+# 应用 NanoDet 的修改
+cd ../nanodet
+git apply ../../models_patch/nanodet_custom.patch
+```
+
+4. 如果遇到冲突，请手动解决冲突后再继续。
 
 ## 实验结果
 
@@ -115,27 +163,19 @@ pip install -r requirements.txt
 ```
 
 ## 使用方法
-## 使用方法
 
 ### 1. 运行模型比较实验
-### 1. 运行模型比较实验
 ```bash
-cd script
-python train_yolo_experiments.py
 cd script
 python train_yolo_experiments.py
 ```
 
 ### 2. 生成实验结果可视化
-### 2. 生成实验结果可视化
 ```bash
-cd script
-python draw_png.py
 cd script
 python draw_png.py
 ```
 
-### 3. 数据集格式转换
 ### 3. 数据集格式转换
 ```bash
 cd script
@@ -145,28 +185,7 @@ python split_coco_from_yolo_lists.py
 ## 实验输出
 
 实验完成后，以下内容将保存在相应目录中：
-cd script
-python split_coco_from_yolo_lists.py
-```
 
-## 实验输出
-
-实验完成后，以下内容将保存在相应目录中：
-
-### 1. 实验结果
-- 模型性能指标对比
-- 训练速度对比
-- 推理速度对比
-- 模型参数量对比
-
-### 2. 可视化结果
-- 性能对比图表
-- 热力图形式的性能展示
-- 训练过程曲线
-
-### 3. 模型权重
-- 各模型的最佳权重文件
-- 训练过程中的检查点
 ### 1. 实验结果
 - 模型性能指标对比
 - 训练速度对比
@@ -197,29 +216,12 @@ python split_coco_from_yolo_lists.py
 - 训练和推理速度对比
 - 模型参数量和计算量对比
 - 不同场景下的性能表现
-1. **数据集准备**: 确保数据集已正确放置在dataset目录下
-2. **模型权重**: 预训练权重文件应放置在models目录下
-3. **实验配置**: 可在脚本中修改实验参数和配置
-4. **资源需求**: 根据实验规模准备足够的计算资源
-5. **结果保存**: 定期备份实验结果和模型权重
-
-## 性能评估
-
-实验完成后，可以查看：
-- 各模型的mAP指标对比
-- 训练和推理速度对比
-- 模型参数量和计算量对比
-- 不同场景下的性能表现
 
 ## 故障排除
 
 如果遇到问题：
 1. 检查数据集路径和格式是否正确
-1. 检查数据集路径和格式是否正确
 2. 确认所有依赖已正确安装
 3. 验证模型权重文件是否完整
 4. 检查实验配置参数是否合理
-5. 查看日志文件了解详细错误信息 
-3. 验证模型权重文件是否完整
-4. 检查实验配置参数是否合理
-5. 查看日志文件了解详细错误信息 
+5. 查看日志文件了解详细错误信息

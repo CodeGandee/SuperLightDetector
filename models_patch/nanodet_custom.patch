@@ -1,0 +1,1092 @@
+diff --git a/.gitignore b/.gitignore
+index c04b9de..841f420 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -117,3 +117,5 @@ work_dirs/
+ *.pth
+ *.py~
+ *.sh~
++
++mlruns/
+\ No newline at end of file
+diff --git a/config/nanodet-plus-m_320-yolo-sigle.yml b/config/nanodet-plus-m_320-yolo-sigle.yml
+new file mode 100644
+index 0000000..d892a00
+--- /dev/null
++++ b/config/nanodet-plus-m_320-yolo-sigle.yml
+@@ -0,0 +1,133 @@
++save_dir: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/experiments/other_sigleclass_detect/nanodet_training-lr001-ratio001
++model:
++  weight_averager:
++    name: ExpMovingAverager
++    decay: 0.9998
++  arch:
++    name: NanoDetPlus
++    detach_epoch: 10
++    backbone:
++      name: ShuffleNetV2
++      model_size: 1.0x
++      out_stages: [2,3,4]
++      activation: LeakyReLU
++    fpn:
++      name: GhostPAN
++      in_channels: [116, 232, 464]
++      out_channels: 96
++      kernel_size: 5
++      num_extra_level: 1
++      use_depthwise: True
++      activation: LeakyReLU
++    head:
++      name: NanoDetPlusHead
++      num_classes: 1  # Single class for your dataset
++      input_channel: 96
++      feat_channels: 96
++      stacked_convs: 2
++      kernel_size: 5
++      strides: [8, 16, 32, 64]
++      activation: LeakyReLU
++      reg_max: 7
++      norm_cfg:
++        type: BN
++      loss:
++        loss_qfl:
++          name: QualityFocalLoss
++          use_sigmoid: True
++          beta: 2.0
++          loss_weight: 1.0
++        loss_dfl:
++          name: DistributionFocalLoss
++          loss_weight: 0.25
++        loss_bbox:
++          name: GIoULoss
++          loss_weight: 2.0
++    # Auxiliary head, only use in training time.
++    aux_head:
++      name: SimpleConvHead
++      num_classes: 1  # Single class for your dataset
++      input_channel: 192
++      feat_channels: 192
++      stacked_convs: 4
++      strides: [8, 16, 32, 64]
++      activation: LeakyReLU
++      reg_max: 7
++
++class_names: &class_names ['TURNROUND']
++
++data:
++  train:
++    name: YoloDataset
++    img_path: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/single_class_dataset_yolo/train
++    ann_path: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/single_class_dataset_yolo/train
++    class_names: *class_names
++    input_size: [320,320]  # Using 320x320 resolution
++    keep_ratio: False
++    pipeline:
++      perspective: 0.0
++      scale: [0.6, 1.4]
++      stretch: [[0.8, 1.2], [0.8, 1.2]]
++      rotation: 0
++      shear: 0
++      translate: 0.2
++      flip: 0.5
++      brightness: 0.2
++      contrast: [0.6, 1.4]
++      saturation: [0.5, 1.2]
++      normalize: [[103.53, 116.28, 123.675], [57.375, 57.12, 58.395]]
++  val:
++    name: YoloDataset
++    img_path: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/single_class_dataset_yolo/val
++    ann_path: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/single_class_dataset_yolo/val
++    class_names: *class_names
++    input_size: [320,320]  # Using 320x320 resolution
++    keep_ratio: False
++    pipeline:
++      normalize: [[103.53, 116.28, 123.675], [57.375, 57.12, 58.395]]
++  test:
++    name: YoloDataset
++    img_path: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/single_class_dataset_yolo/test
++    ann_path: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/single_class_dataset_yolo/test
++    class_names: *class_names
++    input_size: [320,320]  # Using 320x320 resolution
++    keep_ratio: False
++    pipeline:
++      normalize: [[103.53, 116.28, 123.675], [57.375, 57.12, 58.395]]
++
++device:
++  gpu_ids: [6,7]
++  workers_per_gpu: 10
++  batchsize_per_gpu: 4
++
++schedule:
++  optimizer:
++    name: AdamW
++
++    #HACK: original is 0.0001
++    lr: 0.001  # Lower learning rate for fine-tuning
++    weight_decay: 0.05
++  warmup:
++    name: linear
++    steps: 500
++
++    #HACK: original is 0.0001
++    ratio: 0.001
++  total_epochs: 200
++  lr_schedule:
++    name: CosineAnnealingLR
++    T_max: 200
++    eta_min: 0.00005
++  val_intervals: 10  # Evaluate every 10 epochs
++  save_interval: 10  # Save model every 10 epochs
++  load_model: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/models/nanodet-plus-m_320_checkpoint.ckpt  # Pretrained model path
++  # resume: true  # Enable resume training
++
++grad_clip: 35
++evaluator:
++  name: CocoDetectionEvaluator
++  save_key: mAP
++log:
++  interval: 2 
++seed: 42
++save_checkpoint_interval: 10
+\ No newline at end of file
+diff --git a/config/nanodet-plus-m_320-yolo.yml b/config/nanodet-plus-m_320-yolo.yml
+new file mode 100644
+index 0000000..7b1f389
+--- /dev/null
++++ b/config/nanodet-plus-m_320-yolo.yml
+@@ -0,0 +1,133 @@
++save_dir: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/experiments/other_sigleclass_detect/nanodet_training-lr001-ratio001
++model:
++  weight_averager:
++    name: ExpMovingAverager
++    decay: 0.9998
++  arch:
++    name: NanoDetPlus
++    detach_epoch: 10
++    backbone:
++      name: ShuffleNetV2
++      model_size: 1.0x
++      out_stages: [2,3,4]
++      activation: LeakyReLU
++    fpn:
++      name: GhostPAN
++      in_channels: [116, 232, 464]
++      out_channels: 96
++      kernel_size: 5
++      num_extra_level: 1
++      use_depthwise: True
++      activation: LeakyReLU
++    head:
++      name: NanoDetPlusHead
++      num_classes: 4  # Single class for your dataset
++      input_channel: 96
++      feat_channels: 96
++      stacked_convs: 2
++      kernel_size: 5
++      strides: [8, 16, 32, 64]
++      activation: LeakyReLU
++      reg_max: 7
++      norm_cfg:
++        type: BN
++      loss:
++        loss_qfl:
++          name: QualityFocalLoss
++          use_sigmoid: True
++          beta: 2.0
++          loss_weight: 1.0
++        loss_dfl:
++          name: DistributionFocalLoss
++          loss_weight: 0.25
++        loss_bbox:
++          name: GIoULoss
++          loss_weight: 2.0
++    # Auxiliary head, only use in training time.
++    aux_head:
++      name: SimpleConvHead
++      num_classes: 4  # Single class for your dataset
++      input_channel: 192
++      feat_channels: 192
++      stacked_convs: 4
++      strides: [8, 16, 32, 64]
++      activation: LeakyReLU
++      reg_max: 7
++
++class_names: &class_names ['FLIGHT', 'TURNLEFT', 'PARKING', 'TURNROUND']
++
++data:
++  train:
++    name: YoloDataset
++    img_path: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/annotations_yolo/train
++    ann_path: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/annotations_yolo/train
++    class_names: *class_names
++    input_size: [320,320]  # Using 320x320 resolution
++    keep_ratio: False
++    pipeline:
++      perspective: 0.0
++      scale: [0.6, 1.4]
++      stretch: [[0.8, 1.2], [0.8, 1.2]]
++      rotation: 0
++      shear: 0
++      translate: 0.2
++      flip: 0.5
++      brightness: 0.2
++      contrast: [0.6, 1.4]
++      saturation: [0.5, 1.2]
++      normalize: [[103.53, 116.28, 123.675], [57.375, 57.12, 58.395]]
++  val:
++    name: YoloDataset
++    img_path: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/annotations_yolo/val
++    ann_path: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/annotations_yolo/val
++    class_names: *class_names
++    input_size: [320,320]  # Using 320x320 resolution
++    keep_ratio: False
++    pipeline:
++      normalize: [[103.53, 116.28, 123.675], [57.375, 57.12, 58.395]]
++  test:
++    name: YoloDataset
++    img_path: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/annotations_yolo/test
++    ann_path: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/annotations_yolo/test
++    class_names: *class_names
++    input_size: [320,320]  # Using 320x320 resolution
++    keep_ratio: False
++    pipeline:
++      normalize: [[103.53, 116.28, 123.675], [57.375, 57.12, 58.395]]
++
++device:
++  gpu_ids: [6,7]
++  workers_per_gpu: 10
++  batchsize_per_gpu: 4
++
++schedule:
++  optimizer:
++    name: AdamW
++
++    #HACK: original is 0.0001
++    lr: 0.001  # Lower learning rate for fine-tuning
++    weight_decay: 0.05
++  warmup:
++    name: linear
++    steps: 500
++
++    #HACK: original is 0.0001
++    ratio: 0.001
++  total_epochs: 200
++  lr_schedule:
++    name: CosineAnnealingLR
++    T_max: 200
++    eta_min: 0.00005
++  val_intervals: 10  # Evaluate every 10 epochs
++  save_interval: 10  # Save model every 10 epochs
++  load_model: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/models/nanodet-plus-m_320_checkpoint.ckpt  # Pretrained model path
++  # resume: true  # Enable resume training
++
++grad_clip: 35
++evaluator:
++  name: CocoDetectionEvaluator
++  save_key: mAP
++log:
++  interval: 2 
++seed: 42
++save_checkpoint_interval: 10
+\ No newline at end of file
+diff --git a/config/nanodet-plus-m_320-yolo_overfit.yml b/config/nanodet-plus-m_320-yolo_overfit.yml
+new file mode 100644
+index 0000000..8dac4b8
+--- /dev/null
++++ b/config/nanodet-plus-m_320-yolo_overfit.yml
+@@ -0,0 +1,133 @@
++save_dir: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/experiments/other_overfit_experiment/nanodet_training-lr001-ratio001
++model:
++  weight_averager:
++    name: ExpMovingAverager
++    decay: 0.9998
++  arch:
++    name: NanoDetPlus
++    detach_epoch: 10
++    backbone:
++      name: ShuffleNetV2
++      model_size: 1.0x
++      out_stages: [2,3,4]
++      activation: LeakyReLU
++    fpn:
++      name: GhostPAN
++      in_channels: [116, 232, 464]
++      out_channels: 96
++      kernel_size: 5
++      num_extra_level: 1
++      use_depthwise: True
++      activation: LeakyReLU
++    head:
++      name: NanoDetPlusHead
++      num_classes: 4  # Single class for your dataset
++      input_channel: 96
++      feat_channels: 96
++      stacked_convs: 2
++      kernel_size: 5
++      strides: [8, 16, 32, 64]
++      activation: LeakyReLU
++      reg_max: 7
++      norm_cfg:
++        type: BN
++      loss:
++        loss_qfl:
++          name: QualityFocalLoss
++          use_sigmoid: True
++          beta: 2.0
++          loss_weight: 1.0
++        loss_dfl:
++          name: DistributionFocalLoss
++          loss_weight: 0.25
++        loss_bbox:
++          name: GIoULoss
++          loss_weight: 2.0
++    # Auxiliary head, only use in training time.
++    aux_head:
++      name: SimpleConvHead
++      num_classes: 4  # Single class for your dataset
++      input_channel: 192
++      feat_channels: 192
++      stacked_convs: 4
++      strides: [8, 16, 32, 64]
++      activation: LeakyReLU
++      reg_max: 7
++
++class_names: &class_names ['FLIGHT', 'TURNLEFT', 'PARKING', 'TURNROUND']
++
++data:
++  train:
++    name: YoloDataset
++    img_path: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/overfit_label_data_dataset_yolo/train
++    ann_path: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/overfit_label_data_dataset_yolo/train
++    class_names: *class_names
++    input_size: [320,320]  # Using 320x320 resolution
++    keep_ratio: False
++    pipeline:
++      perspective: 0.0
++      scale: [0.6, 1.4]
++      stretch: [[0.8, 1.2], [0.8, 1.2]]
++      rotation: 0
++      shear: 0
++      translate: 0.2
++      flip: 0.5
++      brightness: 0.2
++      contrast: [0.6, 1.4]
++      saturation: [0.5, 1.2]
++      normalize: [[103.53, 116.28, 123.675], [57.375, 57.12, 58.395]]
++  val:
++    name: YoloDataset
++    img_path: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/overfit_label_data_dataset_yolo/val
++    ann_path: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/overfit_label_data_dataset_yolo/val
++    class_names: *class_names
++    input_size: [320,320]  # Using 320x320 resolution
++    keep_ratio: False
++    pipeline:
++      normalize: [[103.53, 116.28, 123.675], [57.375, 57.12, 58.395]]
++  test:
++    name: YoloDataset
++    img_path: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/overfit_label_data_dataset_yolo/train
++    ann_path: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/overfit_label_data_dataset_yolo/train
++    class_names: *class_names
++    input_size: [320,320]  # Using 320x320 resolution
++    keep_ratio: False
++    pipeline:
++      normalize: [[103.53, 116.28, 123.675], [57.375, 57.12, 58.395]]
++
++device:
++  gpu_ids: [6,7]
++  workers_per_gpu: 10
++  batchsize_per_gpu: 4
++
++schedule:
++  optimizer:
++    name: AdamW
++
++    #HACK: original is 0.0001
++    lr: 0.001  # Lower learning rate for fine-tuning
++    weight_decay: 0.05
++  warmup:
++    name: linear
++    steps: 500
++
++    #HACK: original is 0.0001
++    ratio: 0.001
++  total_epochs: 200
++  lr_schedule:
++    name: CosineAnnealingLR
++    T_max: 200
++    eta_min: 0.00005
++  val_intervals: 10  # Evaluate every 10 epochs
++  save_interval: 10  # Save model every 10 epochs
++  load_model: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/models/nanodet-plus-m_320_checkpoint.ckpt  # Pretrained model path
++  # resume: true  # Enable resume training
++
++grad_clip: 35
++evaluator:
++  name: CocoDetectionEvaluator
++  save_key: mAP
++log:
++  interval: 2 
++seed: 42
++save_checkpoint_interval: 10
+\ No newline at end of file
+diff --git a/config/nanodet-plus-m_320.yml b/config/nanodet-plus-m_320.yml
+index f8352f5..af02a3c 100644
+--- a/config/nanodet-plus-m_320.yml
++++ b/config/nanodet-plus-m_320.yml
+@@ -112,7 +112,7 @@ schedule:
+ grad_clip: 35
+ evaluator:
+   name: CocoDetectionEvaluator
+-  save_key: mAP
++  save_key: AP50
+ log:
+   interval: 50
+ 
+diff --git a/config/nanodet-yolo.yml b/config/nanodet-yolo.yml
+new file mode 100644
+index 0000000..3b74246
+--- /dev/null
++++ b/config/nanodet-yolo.yml
+@@ -0,0 +1,134 @@
++# nanodet-plus-m_416
++# COCO mAP(0.5:0.95) = 0.304
++#             AP_50  = 0.459
++#             AP_75  = 0.317
++#           AP_small = 0.106
++#               AP_m = 0.322
++#               AP_l = 0.477
++save_dir: workspace/nanodet-plus-m_416
++model:
++  weight_averager:
++    name: ExpMovingAverager
++    decay: 0.9998
++  arch:
++    name: NanoDetPlus
++    detach_epoch: 10
++    backbone:
++      name: ShuffleNetV2
++      model_size: 1.0x
++      out_stages: [2,3,4]
++      activation: LeakyReLU
++    fpn:
++      name: GhostPAN
++      in_channels: [116, 232, 464]
++      out_channels: 96
++      kernel_size: 5
++      num_extra_level: 1
++      use_depthwise: True
++      activation: LeakyReLU
++    head:
++      name: NanoDetPlusHead
++      num_classes: 80
++      input_channel: 96
++      feat_channels: 96
++      stacked_convs: 2
++      kernel_size: 5
++      strides: [8, 16, 32, 64]
++      activation: LeakyReLU
++      reg_max: 7
++      norm_cfg:
++        type: BN
++      loss:
++        loss_qfl:
++          name: QualityFocalLoss
++          use_sigmoid: True
++          beta: 2.0
++          loss_weight: 1.0
++        loss_dfl:
++          name: DistributionFocalLoss
++          loss_weight: 0.25
++        loss_bbox:
++          name: GIoULoss
++          loss_weight: 2.0
++    # Auxiliary head, only use in training time.
++    aux_head:
++      name: SimpleConvHead
++      num_classes: 80
++      input_channel: 192
++      feat_channels: 192
++      stacked_convs: 4
++      strides: [8, 16, 32, 64]
++      activation: LeakyReLU
++      reg_max: 7
++
++class_names:  &class_names ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
++              'train', 'truck', 'boat', 'traffic_light', 'fire_hydrant',
++              'stop_sign', 'parking_meter', 'bench', 'bird', 'cat', 'dog',
++              'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe',
++              'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee',
++              'skis', 'snowboard', 'sports_ball', 'kite', 'baseball_bat',
++              'baseball_glove', 'skateboard', 'surfboard', 'tennis_racket',
++              'bottle', 'wine_glass', 'cup', 'fork', 'knife', 'spoon', 'bowl',
++              'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot',
++              'hot_dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
++              'potted_plant', 'bed', 'dining_table', 'toilet', 'tv', 'laptop',
++              'mouse', 'remote', 'keyboard', 'cell_phone', 'microwave',
++              'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock',
++              'vase', 'scissors', 'teddy_bear', 'hair_drier', 'toothbrush']
++
++data:
++  train:
++    name: YoloDataset
++    img_path: coco/train2017
++    ann_path: coco/train2017
++    class_names: *class_names
++    input_size: [416,416] #[w,h]
++    keep_ratio: False
++    pipeline:
++      perspective: 0.0
++      scale: [0.6, 1.4]
++      stretch: [[0.8, 1.2], [0.8, 1.2]]
++      rotation: 0
++      shear: 0
++      translate: 0.2
++      flip: 0.5
++      brightness: 0.2
++      contrast: [0.6, 1.4]
++      saturation: [0.5, 1.2]
++      normalize: [[103.53, 116.28, 123.675], [57.375, 57.12, 58.395]]
++  val:
++    name: YoloDataset
++    img_path: coco/val2017
++    ann_path: coco/val2017
++    class_names: *class_names
++    input_size: [416,416] #[w,h]
++    keep_ratio: False
++    pipeline:
++      normalize: [[103.53, 116.28, 123.675], [57.375, 57.12, 58.395]]
++device:
++  gpu_ids: [0]
++  workers_per_gpu: 10
++  batchsize_per_gpu: 96
++schedule:
++#  resume:
++#  load_model:
++  optimizer:
++    name: AdamW
++    lr: 0.001
++    weight_decay: 0.05
++  warmup:
++    name: linear
++    steps: 500
++    ratio: 0.0001
++  total_epochs: 300
++  lr_schedule:
++    name: CosineAnnealingLR
++    T_max: 300
++    eta_min: 0.00005
++  val_intervals: 10
++grad_clip: 35
++evaluator:
++  name: CocoDetectionEvaluator
++  save_key: mAP
++log:
++  interval: 50
+diff --git a/eval_run.sh b/eval_run.sh
+new file mode 100755
+index 0000000..285b927
+--- /dev/null
++++ b/eval_run.sh
+@@ -0,0 +1,96 @@
++#!/bin/bash
++
++# 默认值设置
++eval_select="all"
++base_path="/nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest"
++
++# 帮助信息函数
++show_help() {
++    echo "Usage: $0 [OPTIONS]"
++    echo "Options:"
++    echo "  -h, --help     Show this help message"
++    echo "  -t, --train    Evaluation mode selection:"
++    echo "                 0: Evaluate multi-class model only"
++    echo "                 1: Evaluate single-class model only"
++    echo "                 2: Evaluate overfit model only"
++    echo "                 all: Evaluate all models (default)"
++    echo "  -p, --path     Base path for model weights (required)"
++    echo ""
++    echo "Example:"
++    echo "  $0 -p /path/to/base -t 0    # Evaluate multi-class model only"
++    echo "  $0 -p /path/to/base -t 1    # Evaluate single-class model only"
++    echo "  $0 -p /path/to/base -t 2    # Evaluate overfit model only"
++    echo "  $0 -p /path/to/base         # Evaluate all models (default)"
++}
++
++# 参数解析
++while [[ $# -gt 0 ]]; do
++    case $1 in
++        -h|--help)
++            show_help
++            exit 0
++            ;;
++        -t|--train)
++            eval_select="$2"
++            shift 2
++            ;;
++        -p|--path)
++            base_path="$2"
++            shift 2
++            ;;
++        *)
++            echo "Unknown option: $1"
++            show_help
++            exit 1
++            ;;
++    esac
++done
++
++# 验证参数
++if [[ -z "$base_path" ]]; then
++    echo "Error: Base path is required. Use -p or --path to specify it."
++    show_help
++    exit 1
++fi
++
++if [[ "$eval_select" != "0" && "$eval_select" != "1" && "$eval_select" != "2" && "$eval_select" != "all" ]]; then
++    echo "Error: Invalid evaluation mode. Use 0 for multi-class, 1 for single-class, 2 for overfit, or 'all' for all."
++    show_help
++    exit 1
++fi
++
++# 评估多类模型的函数
++eval_multi_class() {
++    echo "Evaluating multi-class model..."
++    ./test_batch.sh --model_dir=${base_path}/experiments/other_multiclass_detect/nanodet_training-lr001-ratio001/weight --config_file=config/nanodet-plus-m_320-yolo.yml
++}
++
++# 评估单类模型的函数
++eval_single_class() {
++    echo "Evaluating single-class model..."
++    ./test_batch.sh --model_dir=${base_path}/experiments/other_sigleclass_detect/nanodet_training-lr001-ratio001/weight --config_file=config/nanodet-plus-m_320-yolo-sigle.yml
++}
++
++# 评估overfit模型的函数
++eval_overfit() {
++    echo "Evaluating overfit model..."
++    ./test_batch.sh --model_dir=${base_path}/experiments/other_overfit_experiment/nanodet_training-lr001-ratio001/weight --config_file=config/nanodet-plus-m_320-yolo_overfit.yml
++}
++
++# 根据eval_select选择评估模式
++case "$eval_select" in
++    "0")
++        eval_multi_class
++        ;;
++    "1")
++        eval_single_class
++        ;;
++    "2")
++        eval_overfit
++        ;;
++    "all")
++        eval_multi_class
++        eval_single_class
++        eval_overfit
++        ;;
++esac
+\ No newline at end of file
+diff --git a/test_batch.sh b/test_batch.sh
+new file mode 100755
+index 0000000..cb92599
+--- /dev/null
++++ b/test_batch.sh
+@@ -0,0 +1,44 @@
++#!/bin/bash
++
++# Print usage if no arguments provided or help is requested
++if [ $# -eq 0 ] || [[ "$1" == "--help" ]]; then
++    echo "Usage: $0 --model_dir=<path_to_model_directory> --config_file=<path_to_config_file>"
++    echo "Example: $0 --model_dir=/path/to/model/weights --config_file=config/nanodet-plus-m_320-yolo-sigle.yml"
++    exit 1
++fi
++
++# Parse arguments
++model_dir=""
++config_file="" # Initialize config_file variable
++
++for arg in "$@"; do
++    case $arg in
++        --model_dir=*)
++        model_dir="${arg#*=}"
++        shift
++        ;;
++        --config_file=*) # Add case for config_file
++        config_file="${arg#*=}"
++        shift
++        ;;
++    esac
++done
++
++if [ -z "$model_dir" ]; then
++    echo "Error: --model_dir argument is required"
++    echo "Usage: $0 --model_dir=<path_to_model_directory> --config_file=<path_to_config_file>"
++    exit 1
++fi
++
++if [ -z "$config_file" ]; then # Check if config_file is provided
++    echo "Error: --config_file argument is required"
++    echo "Usage: $0 --model_dir=<path_to_model_directory> --config_file=<path_to_config_file>"
++    exit 1
++fi
++
++# Update base_cmd to use the provided config_file
++base_cmd="python tools/test.py --config ${config_file}"
++
++for epoch in $(seq 9 10 199); do
++    $base_cmd --model "${model_dir}/model_epoch_${epoch}.ckpt" --save_dir_flag "test_${epoch}"
++done
+\ No newline at end of file
+diff --git a/tools/flops.py b/tools/flops.py
+index 9ef622a..b71e4c4 100644
+--- a/tools/flops.py
++++ b/tools/flops.py
+@@ -18,18 +18,22 @@ import torch
+ 
+ from nanodet.model.arch import build_model
+ from nanodet.util import cfg, load_config
++from ptflops import get_model_complexity_info
+ 
+ 
+ def main(config, input_shape=(320, 320)):
+     model = build_model(config.model)
+     try:
+-        import mobile_cv.lut.lib.pt.flops_utils as flops_utils
++        macs, params = get_model_complexity_info(model, (3, 224, 224), as_strings=True,
++                                               print_per_layer_stat=True, verbose=True)
++        print('{:<30}  {:<8}'.format('Computational complexity: ', macs))
++        print('{:<30}  {:<8}'.format('Number of parameters: ', params))
+     except ImportError:
+         print("mobile-cv is not installed. Skip flops calculation.")
+         return
+-    first_batch = torch.rand((1, 3, input_shape[0], input_shape[1]))
+-    input_args = (first_batch,)
+-    flops_utils.print_model_flops(model, input_args)
++    # first_batch = torch.rand((1, 3, input_shape[0], input_shape[1]))
++    # input_args = (first_batch,)
++    # flops_utils.print_model_flops(model, input_args)
+ 
+ 
+ def parse_args():
+diff --git a/tools/test.py b/tools/test.py
+index 18a9292..14e9b97 100644
+--- a/tools/test.py
++++ b/tools/test.py
+@@ -40,6 +40,7 @@ def parse_args():
+     )
+     parser.add_argument("--config", type=str, help="model config file(.yml) path")
+     parser.add_argument("--model", type=str, help="ckeckpoint file(.ckpt) path")
++    parser.add_argument("--save_dir_flag", type=str, help="save directory flag")
+     args = parser.parse_args()
+     return args
+ 
+@@ -50,8 +51,12 @@ def main(args):
+     torch.backends.cudnn.enabled = True
+     torch.backends.cudnn.benchmark = True
+     cfg.defrost()
+-    timestr = datetime.datetime.now().__format__("%Y%m%d%H%M%S")
+-    cfg.save_dir = os.path.join(cfg.save_dir, timestr)
++    if not args.save_dir_flag:
++        timestr = datetime.datetime.now().__format__("%Y%m%d%H%M%S")
++        cfg.save_dir = os.path.join(cfg.save_dir, timestr)
++    else:
++        cfg.save_dir = os.path.join(cfg.save_dir, args.save_dir_flag)
++    print(f"test save_dir: {cfg.save_dir}")
+     mkdir(local_rank, cfg.save_dir)
+     logger = NanoDetLightningLogger(cfg.save_dir)
+ 
+@@ -59,7 +64,7 @@ def main(args):
+     cfg.update({"test_mode": args.task})
+ 
+     logger.info("Setting up data...")
+-    val_dataset = build_dataset(cfg.data.val, args.task)
++    val_dataset = build_dataset(cfg.data.test, args.task)
+     val_dataloader = torch.utils.data.DataLoader(
+         val_dataset,
+         batch_size=cfg.device.batchsize_per_gpu,
+@@ -98,7 +103,10 @@ def main(args):
+         logger=logger,
+     )
+     logger.info("Starting testing...")
+-    trainer.test(task, val_dataloader)
++    results = trainer.test(task, val_dataloader)
++    print("----------------begin results----------------")
++    print(results)
++    print("----------------end results----------------")
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/tools/test_dir.py b/tools/test_dir.py
+new file mode 100644
+index 0000000..a8fbbbe
+--- /dev/null
++++ b/tools/test_dir.py
+@@ -0,0 +1,109 @@
++# Copyright 2021 RangiLyu.
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#     http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++import argparse
++import datetime
++import os
++import warnings
++
++import pytorch_lightning as pl
++import torch
++
++from nanodet.data.collate import naive_collate
++from nanodet.data.dataset import build_dataset
++from nanodet.evaluator import build_evaluator
++from nanodet.trainer.task import TrainingTask
++from nanodet.util import (
++    NanoDetLightningLogger,
++    cfg,
++    convert_old_model,
++    load_config,
++    mkdir,
++)
++
++
++def parse_args():
++    parser = argparse.ArgumentParser()
++    parser.add_argument(
++        "--task", type=str, default="val", help="task to run, test or val"
++    )
++    parser.add_argument("--config", type=str, help="model config file(.yml) path")
++    parser.add_argument("--model", type=str, help="ckeckpoint file(.ckpt) path")
++    args = parser.parse_args()
++    return args
++
++
++def main(args):
++    load_config(cfg, args.config)
++    local_rank = -1
++    torch.backends.cudnn.enabled = True
++    torch.backends.cudnn.benchmark = True
++    cfg.defrost()
++    timestr = datetime.datetime.now().__format__("%Y%m%d%H%M%S")
++    cfg.save_dir = os.path.join(cfg.save_dir, timestr)
++    mkdir(local_rank, cfg.save_dir)
++    logger = NanoDetLightningLogger(cfg.save_dir)
++
++    assert args.task in ["val", "test"]
++    cfg.update({"test_mode": args.task})
++
++    logger.info("Setting up data...")
++    val_dataset = build_dataset(cfg.data.test, args.task)
++    val_dataloader = torch.utils.data.DataLoader(
++        val_dataset,
++        batch_size=cfg.device.batchsize_per_gpu,
++        shuffle=False,
++        num_workers=cfg.device.workers_per_gpu,
++        pin_memory=True,
++        collate_fn=naive_collate,
++        drop_last=False,
++    )
++    evaluator = build_evaluator(cfg.evaluator, val_dataset)
++
++    logger.info("Creating model...")
++    task = TrainingTask(cfg, evaluator)
++
++    ckpt = torch.load(args.model)
++    if "pytorch-lightning_version" not in ckpt:
++        warnings.warn(
++            "Warning! Old .pth checkpoint is deprecated. "
++            "Convert the checkpoint with tools/convert_old_checkpoint.py "
++        )
++        ckpt = convert_old_model(ckpt)
++    task.load_state_dict(ckpt["state_dict"])
++
++    if cfg.device.gpu_ids == -1:
++        logger.info("Using CPU training")
++        accelerator, devices = "cpu", None
++    else:
++        accelerator, devices = "gpu", cfg.device.gpu_ids
++
++    trainer = pl.Trainer(
++        default_root_dir=cfg.save_dir,
++        accelerator=accelerator,
++        devices=devices,
++        log_every_n_steps=cfg.log.interval,
++        num_sanity_val_steps=0,
++        logger=logger,
++    )
++    logger.info("Starting testing...")
++    results = trainer.test(task, val_dataloader)
++    print("----------------begin results----------------")
++    print(results)
++    print("----------------end results----------------")
++
++
++if __name__ == "__main__":
++    args = parse_args()
++    main(args)
+diff --git a/tools/train.py b/tools/train.py
+index d8c74b7..6b99f01 100644
+--- a/tools/train.py
++++ b/tools/train.py
+@@ -19,6 +19,8 @@ import warnings
+ import pytorch_lightning as pl
+ import torch
+ from pytorch_lightning.callbacks import TQDMProgressBar
++from pytorch_lightning.callbacks import ModelCheckpoint
++from pathlib import Path
+ 
+ from nanodet.data.collate import naive_collate
+ from nanodet.data.dataset import build_dataset
+@@ -131,6 +133,23 @@ def main(args):
+         strategy = "ddp"
+         env_utils.set_multi_processing(distributed=True)
+ 
++    Path(cfg.save_dir).joinpath("weight").mkdir(parents=True, exist_ok=True)
++    save_checkpoint_dir = Path(cfg.save_dir).joinpath("weight").as_posix()
++    if cfg.save_checkpoint_interval is None:
++        save_checkpoint_interval = 10
++    else:
++        save_checkpoint_interval = cfg.save_checkpoint_interval
++        
++    checkpoint_callback = ModelCheckpoint(
++        dirpath=save_checkpoint_dir,  # Path to save checkpoints
++        filename='model_epoch_{epoch}', # 文件名格式
++        every_n_epochs=save_checkpoint_interval,   # 每N个epoch保存一次
++        save_top_k=-1,        # 保存所有checkpoint
++        save_weights_only=True,  # 只保存模型权重
++        save_last=False,  # 不保存last checkpoint
++        auto_insert_metric_name=False  # 防止自动插入metric名称
++    )
++
+     trainer = pl.Trainer(
+         default_root_dir=cfg.save_dir,
+         max_epochs=cfg.schedule.total_epochs,
+@@ -139,7 +158,7 @@ def main(args):
+         devices=devices,
+         log_every_n_steps=cfg.log.interval,
+         num_sanity_val_steps=0,
+-        callbacks=[TQDMProgressBar(refresh_rate=0)],  # disable tqdm bar
++        callbacks=[TQDMProgressBar(refresh_rate=0),checkpoint_callback],  # disable tqdm bar
+         logger=logger,
+         benchmark=cfg.get("cudnn_benchmark", True),
+         gradient_clip_val=cfg.get("grad_clip", 0.0),
+@@ -147,6 +166,8 @@ def main(args):
+         precision=precision,
+     )
+ 
++
++
+     trainer.fit(task, train_dataloader, val_dataloader, ckpt_path=model_resume_path)
+ 
+ 
+diff --git a/train_run.sh b/train_run.sh
+new file mode 100755
+index 0000000..0740925
+--- /dev/null
++++ b/train_run.sh
+@@ -0,0 +1,99 @@
++#!/bin/bash
++
++# 默认值设置
++train_select="all"
++base_path="/nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest"
++
++# 帮助信息函数
++show_help() {
++    echo "Usage: $0 [OPTIONS]"
++    echo "Options:"
++    echo "  -h, --help     Show this help message"
++    echo "  -t, --train    Training mode selection:"
++    echo "                 0: Train multi-class model only"
++    echo "                 1: Train single-class model only"
++    echo "                 2: Train overfit model only"
++    echo "                 all: Train all models (default)"
++    echo "  -p, --path     Base path for saving models (required)"
++    echo ""
++    echo "Example:"
++    echo "  $0 -p /path/to/base -t 0    # Train multi-class model only"
++    echo "  $0 -p /path/to/base -t 1    # Train single-class model only"
++    echo "  $0 -p /path/to/base -t 2    # Train overfit model only"
++    echo "  $0 -p /path/to/base         # Train all models (default)"
++}
++
++# 参数解析
++while [[ $# -gt 0 ]]; do
++    case $1 in
++        -h|--help)
++            show_help
++            exit 0
++            ;;
++        -t|--train)
++            train_select="$2"
++            shift 2
++            ;;
++        -p|--path)
++            base_path="$2"
++            shift 2
++            ;;
++        *)
++            echo "Unknown option: $1"
++            show_help
++            exit 1
++            ;;
++    esac
++done
++
++# 验证参数
++if [[ -z "$base_path" ]]; then
++    echo "Error: Base path is required. Use -p or --path to specify it."
++    show_help
++    exit 1
++fi
++
++if [[ "$train_select" != "0" && "$train_select" != "1" && "$train_select" != "2" && "$train_select" != "all" ]]; then
++    echo "Error: Invalid training mode. Use 0 for multi-class, 1 for single-class, 2 for overfit, or 'all' for all."
++    show_help
++    exit 1
++fi
++
++# 训练多类模型的函数
++train_multi_class() {
++    echo "Training multi-class model..."
++    python tools/train.py config/nanodet-plus-m_320-yolo.yml \
++        -o save_dir=${base_path}/experiments/other_multiclass_detect/nanodet_training-lr001-ratio001/
++}
++
++# 训练单类模型的函数
++train_single_class() {
++    echo "Training single-class model..."
++    python tools/train.py config/nanodet-plus-m_320-yolo-sigle.yml \
++        -o save_dir=${base_path}/experiments/other_sigleclass_detect/nanodet_training-lr001-ratio001/
++}
++
++# 训练overfit模型的函数
++train_overfit() {
++    echo "Training overfit model..."
++    python tools/train.py config/nanodet-plus-m_320-yolo_overfit.yml \
++        -o save_dir=${base_path}/experiments/other_overfit_experiment/nanodet_training-lr001-ratio001/
++}
++
++# 根据train_select选择训练模式
++case "$train_select" in
++    "0")
++        train_multi_class
++        ;;
++    "1")
++        train_single_class
++        ;;
++    "2")
++        train_overfit
++        ;;
++    "all")
++        train_multi_class
++        train_single_class
++        train_overfit
++        ;;
++esac
