@@ -578,9 +578,9 @@ class YOLOExperiment:
 def main():
     # Create experiments
     experiments = [
-        YOLOExperiment("multiclass_detect", "label_data_dataset"),
-        YOLOExperiment("singleclass_detect", "single_class_dataset"),
-        YOLOExperiment("overfit_experiment", "overfit_label_data_dataset")
+        YOLOExperiment("multiclass_detect", "dataset/label_data_dataset"),
+        YOLOExperiment("singleclass_detect", "dataset/single_class_dataset"),
+        YOLOExperiment("overfit_experiment", "dataset/overfit_label_data_dataset")
     ]
     
     # Run experiments
