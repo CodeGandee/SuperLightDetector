@@ -1,20 +1,109 @@
-# YOLO微调训练项目 - 优化版本
+# YOLO系列模型比较实验项目
 
-本项目使用YOLOv8n模型对自定义小数据集进行微调训练，支持记录训练损失和生成混淆矩阵。针对小数据集进行了参数优化。
+本项目主要用于进行YOLO系列模型的比较实验，以及NanoDet和PicoDet等轻量级检测模型的性能对比实验。项目包含完整的实验脚本、数据集和模型权重文件。
 
-## 数据集说明
+## 项目结构
 
-数据集包含4个类别：
-- FLIGHT (飞行)
-- TURNLEFT (左转)
-- PARKING (停车)
-- TURNROUND (掉头)
+```
+label_data_PRTest/
+├── dataset/              # 存放实验数据集
+├── models/              # 存放YOLO权重和其他检测模型
+├── script/              # 实验相关脚本
+│   ├── train_yolo_experiments.py    # YOLO系列模型训练和比较实验脚本
+│   ├── draw_png.py                  # 实验结果可视化脚本
+│   └── split_coco_from_yolo_lists.py # YOLO格式数据集转换为COCO格式工具
+├── experiments/         # 实验输出结果
+│   ├── multiclass_detect/          # 多类别检测实验
+│   ├── singleclass_detect/         # 单类别检测实验
+│   ├── overfit_experiment/         # 过拟合实验
+│   ├── other_multiclass_detect/    # 其他模型多类别检测实验
+│   ├── other_sigleclass_detect/    # 其他模型单类别检测实验
+│   └── other_overfit_experiment/   # 其他模型过拟合实验
+├── logs/               # 训练日志
+└── requirements.txt    # 项目依赖
+```
 
-### 数据集分布（已优化）
-- **训练集**: 35张图片 (68.6%)
-- **验证集**: 10张图片 (19.6%)
-- **测试集**: 6张图片 (11.8%)
-- **总计**: 51张图片
+## 实验结果
+
+### 1. 多类别检测实验 (multiclass_detect)
+<div align="center">
+<img src="experiments/multiclass_detect/mAP50_heatmap.png" alt="多类别检测mAP50热力图" width="800"/>
+</div>
+
+- 实验目的：评估不同模型在多类别目标检测任务上的性能
+- 实验内容：使用YOLO系列模型和轻量级模型（NanoDet、PicoDet）进行多类别检测
+- 结果说明：热力图展示了不同模型在不同训练轮次下的mAP50性能变化
+
+### 2. 单类别检测实验 (singleclass_detect)
+<div align="center">
+<img src="experiments/singleclass_detect/mAP50_heatmap.png" alt="单类别检测mAP50热力图" width="800"/>
+</div>
+
+- 实验目的：评估模型在单类别检测任务上的性能表现
+- 实验内容：使用相同模型架构进行单类别目标检测
+- 结果说明：展示了模型在简化任务下的性能表现和收敛特性
+
+### 3. 过拟合实验 (overfit_experiment)
+<div align="center">
+<img src="experiments/overfit_experiment/mAP50_heatmap.png" alt="过拟合实验mAP50热力图" width="800"/>
+</div>
+
+- 实验目的：研究模型在小数据集上的过拟合现象
+- 实验内容：使用不同训练策略和模型配置进行过拟合实验
+- 结果说明：展示了模型在训练过程中的性能变化和过拟合趋势
+
+### 4. 其他模型多类别检测 (other_multiclass_detect)
+<div align="center">
+<img src="experiments/other_multiclass_detect/mAP50_heatmap.png" alt="其他模型多类别检测mAP50热力图" width="800"/>
+</div>
+
+- 实验目的：评估非YOLO系列模型在多类别检测任务上的性能
+- 实验内容：使用NanoDet、PicoDet等轻量级模型进行多类别检测
+- 结果说明：对比展示了轻量级模型与YOLO系列模型的性能差异
+
+### 5. 其他模型单类别检测 (other_sigleclass_detect)
+<div align="center">
+<img src="experiments/other_sigleclass_detect/mAP50_heatmap.png" alt="其他模型单类别检测mAP50热力图" width="800"/>
+</div>
+
+- 实验目的：评估轻量级模型在单类别检测任务上的性能
+- 实验内容：使用NanoDet、PicoDet等模型进行单类别检测
+- 结果说明：展示了轻量级模型在简化任务下的性能表现
+
+### 6. 其他模型过拟合实验 (other_overfit_experiment)
+<div align="center">
+<img src="experiments/other_overfit_experiment/mAP50_heatmap.png" alt="其他模型过拟合实验mAP50热力图" width="800"/>
+</div>
+
+- 实验目的：研究轻量级模型在小数据集上的过拟合特性
+- 实验内容：使用不同轻量级模型配置进行过拟合实验
+- 结果说明：展示了轻量级模型在训练过程中的性能变化和过拟合趋势
+
+## 主要功能
+
+### 1. 模型比较实验
+- YOLO系列模型（YOLOv5、YOLOv8等）的性能对比
+- NanoDet和PicoDet等轻量级检测模型的性能评估
+- 不同模型在相同数据集上的训练效果对比
+
+### 2. 实验脚本说明
+
+#### train_yolo_experiments.py
+- 用于执行YOLO系列模型的训练实验
+- 支持多模型并行训练和比较
+- 自动记录训练指标和性能数据
+- 生成详细的实验报告
+
+#### draw_png.py
+- 用于可视化实验结果
+- 生成模型性能对比图表
+- 支持mAP、训练速度、推理速度等指标的对比展示
+- 生成热力图形式的性能对比图
+
+#### split_coco_from_yolo_lists.py
+- 将YOLO格式的数据集转换为COCO格式
+- 支持数据集格式转换和验证
+- 生成COCO格式的标注文件
 
 ## 环境设置
 
@@ -23,164 +112,66 @@
 pip install -r requirements.txt
 ```
 
-### 2. 数据集结构
-确保数据集按照以下结构组织：
-```
-label_data_PRTest/
-├── label_data_dataset/
-│   ├── images/
-│   │   ├── train/     # 训练图片 (35张)
-│   │   ├── val/       # 验证图片 (10张)
-│   │   └── test/      # 测试图片 (6张)
-│   └── labels/
-│       ├── train/     # 训练标签 (35个)
-│       ├── val/       # 验证标签 (10个)
-│       └── test/      # 测试标签 (6个)
-├── script/
-│   ├── train_yolo.py
-│   ├── reorganize_simple.py
-│   └── label_data.yaml
-└── reorganize.sh
-```
-
-## 数据集重新划分
-
-如果需要重新划分数据集，可以使用以下方法：
-
-### 方法1: 使用bash脚本（推荐）
-```bash
-cd label_data_PRTest
-chmod +x reorganize.sh
-./reorganize.sh
-```
-
-### 方法2: 使用Python脚本
-```bash
-cd label_data_PRTest/script
-python reorganize_simple.py
-```
-
 ## 使用方法
 
-### 1. 运行训练
+### 1. 运行模型比较实验
 ```bash
-cd label_data_PRTest/script
-python train_yolo.py
+cd script
+python train_yolo_experiments.py
 ```
 
-### 2. 训练参数说明（针对小数据集优化）
+### 2. 生成实验结果可视化
+```bash
+cd script
+python draw_png.py
+```
 
-#### 基础参数
-- **epochs**: 200轮训练（增加以充分学习小数据集）
-- **imgsz**: 640像素图片大小
-- **device**: CPU训练（可修改为'0'使用GPU）
-- **batch**: 4（小batch size适合小数据集，避免过拟合）
+### 3. 数据集格式转换
+```bash
+cd script
+python split_coco_from_yolo_lists.py
+```
 
-#### 学习率参数
-- **lr0**: 0.001（降低初始学习率）
-- **lrf**: 0.1（最终学习率因子）
-- **momentum**: 0.9
-- **weight_decay**: 0.0005
-- **optimizer**: AdamW（适合小数据集）
+## 实验输出
 
-#### 数据增强参数（适度增强）
-- **hsv_h**: 0.015（色调增强）
-- **hsv_s**: 0.7（饱和度增强）
-- **hsv_v**: 0.4（明度增强）
-- **fliplr**: 0.5（水平翻转概率）
-- **translate**: 0.1（平移增强）
-- **scale**: 0.5（缩放增强）
-- **mosaic**: 1.0（mosaic增强）
+实验完成后，以下内容将保存在相应目录中：
 
-#### 其他优化
-- **warmup_epochs**: 5（预热轮数）
-- **close_mosaic**: 10（最后10轮关闭mosaic增强）
-- **amp**: False（CPU训练关闭混合精度）
+### 1. 实验结果
+- 模型性能指标对比
+- 训练速度对比
+- 推理速度对比
+- 模型参数量对比
 
-## 训练输出
+### 2. 可视化结果
+- 性能对比图表
+- 热力图形式的性能展示
+- 训练过程曲线
 
-训练完成后，以下文件将保存在 `training_outputs/` 目录中：
-
-### 1. 训练指标可视化
-- **training_curves_optimized.png**: 包含4个子图的训练指标图
-  - 边界框损失 (训练vs验证)
-  - 分类损失 (训练vs验证)
-  - mAP指标 (mAP@0.5 和 mAP@0.5:0.95)
-  - 精确度和召回率
-
-### 2. 模型文件
-- **best.pt**: 最佳模型权重
-- **last.pt**: 最后一轮训练的模型权重
-- **模型.onnx**: 导出的ONNX格式模型
-
-### 3. 评估结果
-- **confusion_matrix.png**: 混淆矩阵
-- **results.csv**: 详细的训练指标数据
-- **final_metrics.txt**: 最终指标摘要
-- **val_batch*.jpg**: 验证批次的预测结果可视化
-
-### 4. 训练日志
-- 控制台输出包含实时训练进度
-- 验证集和测试集性能指标
-- 最终的mAP、精确度、召回率
-
-## 监控训练进度
-
-脚本会在训练过程中显示：
-- 每轮的损失值
-- 验证集性能指标
-- 测试集性能指标
-- 最终的mAP、精确度、召回率对比
-
-## 小数据集训练建议
-
-### 1. 参数调优建议
-- **batch size**: 保持较小值（2-8），避免过拟合
-- **学习率**: 使用较低的初始学习率
-- **epochs**: 增加训练轮数，但注意监控过拟合
-- **数据增强**: 适度使用，避免过度增强
-
-### 2. 监控过拟合
-- 观察训练损失vs验证损失的差距
-- 如果验证损失开始上升，考虑早停
-- 使用权重衰减和dropout防止过拟合
-
-### 3. 模型选择
-- YOLOv8n适合小数据集，参数量较少
-- 可以考虑冻结部分层进行微调
-- 使用预训练权重提高收敛速度
-
-## 自定义配置
-
-可以在 `train_yolo.py` 中修改以下参数：
-- `epochs`: 训练轮数
-- `batch`: 批次大小
-- `lr0`: 初始学习率
-- `optimizer`: 优化器选择
-- 数据增强参数
-- 其他训练超参数
+### 3. 模型权重
+- 各模型的最佳权重文件
+- 训练过程中的检查点
 
 ## 注意事项
 
-1. **小数据集特点**: 51张图片属于小数据集，需要特别注意过拟合
-2. **数据质量**: 确保标注质量，小数据集中每个样本都很重要
-3. **验证策略**: 使用分层采样确保各类别在训练/验证/测试集中均匀分布
-4. **GPU加速**: 建议使用GPU加速训练（修改device参数为'0'）
-5. **模型保存**: 训练过程中会自动保存最佳模型
+1. **数据集准备**: 确保数据集已正确放置在dataset目录下
+2. **模型权重**: 预训练权重文件应放置在models目录下
+3. **实验配置**: 可在脚本中修改实验参数和配置
+4. **资源需求**: 根据实验规模准备足够的计算资源
+5. **结果保存**: 定期备份实验结果和模型权重
+
+## 性能评估
+
+实验完成后，可以查看：
+- 各模型的mAP指标对比
+- 训练和推理速度对比
+- 模型参数量和计算量对比
+- 不同场景下的性能表现
 
 ## 故障排除
 
 如果遇到问题：
-1. 检查数据集路径是否正确
+1. 检查数据集路径和格式是否正确
 2. 确认所有依赖已正确安装
-3. 验证图片和标签文件是否匹配
-4. 检查数据集划分是否合理
-5. 监控训练过程中的内存使用
-
-## 性能评估
-
-训练完成后，脚本会自动生成：
-- 验证集性能报告
-- 测试集性能报告
-- 混淆矩阵分析
-- 各类别的精确度和召回率 
+3. 验证模型权重文件是否完整
+4. 检查实验配置参数是否合理
+5. 查看日志文件了解详细错误信息 
