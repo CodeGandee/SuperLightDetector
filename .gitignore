@@ -30,3 +30,4 @@ single_class_dataset_yolo_coco/
 dataset/
 dataset_anylabel/
 script/.cometml-runs/models/
+temp_result/

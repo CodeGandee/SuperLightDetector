@@ -9,7 +9,7 @@ from PIL import Image, ImageDraw, ImageFont
 # Define a few colors for bounding boxes, cycling through them
 BOX_COLORS = ["red", "green", "blue", "yellow", "purple", "orange", "cyan"]
 
-def draw_debug_visualizations_for_split(split_images_data, split_annotations_data, yolo_image_source_dir, coco_categories_list, num_samples_to_draw, debug_image_height=720):
+def draw_debug_visualizations_for_split(split_images_data, split_annotations_data, yolo_image_source_dir, coco_categories_list, num_samples_to_draw, debug_image_height=1920):
     """
     Generates debug visualizations for a given split.
     Selects random images, draws their bounding boxes and category labels.
@@ -120,6 +120,9 @@ def create_composite_debug_image(pil_images_list, output_path_str, canvas_width=
     # and then fit `images_per_row` images.
     
     padding = 20 # Padding around images and canvas edge
+
+    # Calculate default images_per_row as square root of total images if not specified
+    images_per_row = int((len(pil_images_list))/2) if len(pil_images_list) > 0 else 1
     
     # Determine max width per image in a row to fit images_per_row
     available_width_for_images = canvas_width - (images_per_row + 1) * padding
@@ -136,6 +139,7 @@ def create_composite_debug_image(pil_images_list, output_path_str, canvas_width=
     # Final target height for each image in the composite, ensuring it fits
     target_img_height = min(sample_img_height, max_img_height_in_col)
 
+    print(f"Debug: num_rows: {num_rows}, target_img_height: {target_img_height} ,sample_img_height: {sample_img_height} ,max_img_height_in_col: {max_img_height_in_col}")
 
     current_x = padding
     current_y = padding
@@ -333,6 +337,11 @@ def create_coco_splits(main_coco_path_str, yolo_dir_str, output_dir_str, debug_e
                 coco_categories_list=coco_categories,
                 num_samples_to_draw=num_debug_samples_per_split
             )
+            # Save individual debug images for this split
+            for idx, img in enumerate(drawn_images):
+                individual_debug_path = debug_visualization_output_dir / f"{split_name}_debug_{idx}.jpg"
+                img.save(individual_debug_path, "JPEG", quality=90)
+                print(f"Saved individual debug image to {individual_debug_path}")
             all_pil_images_for_composite_debug.extend(drawn_images)
 
     if debug_enabled and all_pil_images_for_composite_debug:
@@ -356,6 +365,8 @@ if __name__ == '__main__':
                         help='Enable debug mode. This will generate a composite image (debug.jpg) with 2 random annotated samples per split.')
     parser.add_argument('--base_class_id', type=int, default=1,
                         help='this start base class id for yolo class ID for the COCO categories. Defaults to 1 means yolo class start same as coco class start')
+    parser.add_argument('--num_debug_samples', type=int, default=2,
+                        help='Number of debug samples to generate per split when debug mode is enabled. Defaults to 2.')
     args = parser.parse_args()
     
     # Determine output directory
@@ -367,7 +378,7 @@ if __name__ == '__main__':
     
     Path(output_dir_param).mkdir(parents=True, exist_ok=True)
 
-    num_debug_samples = 2 # As per user request "2 as function parameter" for debug mode
+    num_debug_samples = args.num_debug_samples # As per user request "2 as function parameter" for debug mode
 
     create_coco_splits(
         main_coco_path_str=args.main_coco_json, 
