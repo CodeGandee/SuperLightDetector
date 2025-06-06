@@ -83,9 +83,9 @@ def process_test_dir(test_dir, model_name, results):
         except Exception as e:
             logger.warning(f"Error reading {eval_file}: {str(e)}")
 
-def create_nanodet_heatmaps(model_names, results, output_dir):
+def create_nanodet_heatmaps(model_names, results, output_dir,dataset_path):
     """Create heatmaps for NanoDet results"""
-    exp = YOLOExperiment("other_multiclass_detect", "/nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/label_data_dataset")
+    exp = YOLOExperiment("other_multiclass_detect", dataset_path)
     exp.results = results
     
     # Create model info dictionary for all models
@@ -106,6 +106,7 @@ def main():
     # Set up argument parser
     parser = argparse.ArgumentParser(description="Generate heatmaps for NanoDet results.")
     parser.add_argument("--base_path", type=str, help="Base path for NanoDet results", required=True)
+    parser.add_argument("--dataset_path", type=str, help="Dataset path", required=True)
     args = parser.parse_args()
 
     # Use the base_path from arguments
@@ -119,7 +120,7 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # Create heatmaps
-    create_nanodet_heatmaps(model_names, results, output_dir)
+    create_nanodet_heatmaps(model_names, results, output_dir,args.dataset_path)
     
     logger.info(f"Heatmaps created successfully in {output_dir}!")
 

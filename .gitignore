@@ -31,3 +31,7 @@ dataset/
 dataset_anylabel/
 script/.cometml-runs/models/
 temp_result/
+
+experiments*
+*.pt
+log*

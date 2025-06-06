@@ -375,8 +375,11 @@ if __name__ == '__main__':
     else:
         yolo_path = Path(args.yolo_dir)
         output_dir_param = yolo_path.parent / (yolo_path.name + "_coco")
-    
-    Path(output_dir_param).mkdir(parents=True, exist_ok=True)
+
+    if output_dir_param.exists():
+        shutil.rmtree(output_dir_param)
+        print(f"Removed existing output directory: {output_dir_param}")
+    output_dir_param.mkdir(parents=True, exist_ok=True)
 
     num_debug_samples = args.num_debug_samples # As per user request "2 as function parameter" for debug mode
 

@@ -1,0 +1,3 @@
+dataset_root: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/dataset/white_dataset_0604_2
+output_root: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/experiments_white_dataset_0604_2
+log_root: /nfs/3D/zhangleichao/zhangleichao/CLIMB_WS/label_data_PRTest/logs_0604_2

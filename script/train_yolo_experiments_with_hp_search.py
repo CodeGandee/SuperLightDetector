@@ -16,42 +16,31 @@ import torch
 from collections import Counter
 import yaml
 import matplotlib.font_manager as fm
-from omegaconf import OmegaConf
-import sys
-import argparse
 
-def load_config(config_path):
-    config = OmegaConf.load(config_path)
-    return config
+# Configure logger
+logger.remove()  # Remove default handler
+logger.add(
+    "logs/training_{time}.log",
+    rotation="500 MB", 
+    retention="10 days",
+    level="INFO",
+    format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {file}:{line} | {message}"
+)
 
-def setup_logger(log_root='./logs'):
-    logger.remove()  # Remove default handler
-    logger.add(
-        f"{log_root}/yolo_training_{{time}}.log",
-        rotation="500 MB", 
-        retention="10 days",
-        level="INFO",
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {file}:{line} | {message}"
-    )
-    logger.add(
-        lambda msg: print(msg),
-        level="INFO",
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {file}:{line} | {message}"
-    )
-    return logger
+logger.add(
+    lambda msg: print(msg),
+    level="INFO",
+    format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {file}:{line} | {message}"
+)
 
 class YOLOExperiment:
-    def __init__(self, experiment_name, dataset_path, output_root=None, logger=setup_logger(), single_class=False):
+    def __init__(self, experiment_name, dataset_path, single_class=False):
         self.experiment_name = experiment_name
         self.dataset_path = Path(dataset_path)
-        self.logger = logger
         logger.info(f'self.dataset_path/n:{self.dataset_path}')
         self.single_class = single_class
-        if output_root:
-            self.output_dir = Path(output_root) / experiment_name
-            self.output_dir.mkdir(parents=True, exist_ok=True)
-        else:
-           logger.info(f'output_root is not provided,is None')
+        self.output_dir = Path(f"experiments_hp_search/{experiment_name}")
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         
         # Model versions (smallest models for each version)
         self.model_versions = [
@@ -105,7 +94,7 @@ class YOLOExperiment:
                 self.chinese_font = fm.FontProperties(family='sans-serif')
                 
         except Exception as e:
-            self.logger.warning(f"Font setup failed, using default font: {e}")
+            logger.warning(f"Font setup failed, using default font: {e}")
             self.chinese_font = fm.FontProperties(family='sans-serif')
         
         plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'SimHei', 'Arial Unicode MS', 'sans-serif']
@@ -136,21 +125,23 @@ class YOLOExperiment:
                             
         return stats
     
-    def _get_model_info(self, model):
+    def _get_model_info(self, actual_model_object): # actual_model_object is YOLO().model
         """Get model parameters and FLOPs"""
         try:
             # Get total parameters
-            total_params = sum(p.numel() for p in model.parameters())
+            total_params = sum(p.numel() for p in actual_model_object.parameters())
             
             # Calculate FLOPs
             # For YOLO models, we can estimate FLOPs based on model architecture
             # Using a rough estimation based on input size and model parameters
-            input_size = 320  # Default input size
-            flops = total_params * 2 * input_size * input_size / 1000  # Rough estimation
+            input_size = 320  # Default input size, adjust if necessary
+            # This is a very rough estimation. Ultralytics models often report FLOPs during validation or via model.info().
+            # Consider using model.info(verbose=False) or similar for more accurate FLOPs if available.
+            flops = total_params * 2 * input_size * input_size / 1000  # Rough estimation in GFLOPs (if params * 2 * H * W)
             
             return total_params, flops
         except Exception as e:
-            self.logger.warning(f"Error calculating model info: {str(e)}")
+            logger.warning(f"Error calculating model info: {str(e)}")
             return 0, 0  # Return default values if calculation fails
     
     def _create_single_class_dataset(self):
@@ -174,17 +165,17 @@ class YOLOExperiment:
                     split_path = single_class_dir / dataset_config[split]
                     if not split_path.exists():
                         paths_valid = False
-                        self.logger.warning(f"Split directory not found: {split_path}")
+                        logger.warning(f"Split directory not found: {split_path}")
                         break
                 
                 if paths_valid:
-                    self.logger.info("Single class dataset already exists and is valid, skipping creation")
+                    logger.info("Single class dataset already exists and is valid, skipping creation")
                     self.dataset_path = single_class_dir
                     return
                 else:
-                    self.logger.warning("Single class dataset exists but is invalid, recreating...")
+                    logger.warning("Single class dataset exists but is invalid, recreating...")
             except Exception as e:
-                self.logger.warning(f"Error validating existing dataset: {str(e)}, recreating...")
+                logger.warning(f"Error validating existing dataset: {str(e)}, recreating...")
         
         # Read original dataset.yaml to get class names
         original_yaml_path = self.dataset_path / "dataset.yaml"
@@ -198,7 +189,7 @@ class YOLOExperiment:
             all_classes.update(self.dataset_stats[split]['classes'])
         most_frequent_class = all_classes.most_common(1)[0][0]
         
-        self.logger.info(f"Creating single class dataset for class {most_frequent_class} ({original_names.get(most_frequent_class, f'class_{most_frequent_class}')})")
+        logger.info(f"Creating single class dataset for class {most_frequent_class} ({original_names.get(most_frequent_class, f'class_{most_frequent_class}')})")
         
         # Create new dataset directory
         single_class_dir.mkdir(exist_ok=True)
@@ -264,145 +255,224 @@ class YOLOExperiment:
         
         # Update dataset path
         self.dataset_path = single_class_dir
-        self.logger.info(f'Changed dataset path to: {self.dataset_path}')
+        logger.info(f'Changed dataset path to: {self.dataset_path}')
         
         # Log split statistics
-        self.logger.info(f"Single class dataset created with split sizes:")
-        self.logger.info(f"Train: {len(splits['train'][0])} images")
-        self.logger.info(f"Val: {len(splits['val'][0])} images")
-        self.logger.info(f"Test: {len(splits['test'][0])} images")
+        logger.info(f"Single class dataset created with split sizes:")
+        logger.info(f"Train: {len(splits['train'][0])} images")
+        logger.info(f"Val: {len(splits['val'][0])} images")
+        logger.info(f"Test: {len(splits['test'][0])} images")
 
     def train_and_evaluate(self):
-        # Initialize results storage for this model
-        self.results['mAP50'] = pd.DataFrame()
-        self.results['mAP75'] = pd.DataFrame()
-        self.results['mAP50_95'] = pd.DataFrame()
-        self.results['inference_time'] = pd.DataFrame()
+        # Initialize results storage for this experiment run
+        self.results = {
+            'mAP50': pd.DataFrame(),
+            'mAP75': pd.DataFrame(),
+            'mAP50_95': pd.DataFrame(),
+            'inference_time': pd.DataFrame()
+        }
         self.model_info = {}
-        """Train and evaluate models"""
+
         # Log dataset statistics in a parent run
-        with mlflow.start_run(run_name=f"{self.experiment_name}_overview"):
+        with mlflow.start_run(run_name=f"{self.experiment_name}_overview", description="Overview run for experiment, includes dataset stats."):
             mlflow.log_dict(self.dataset_stats, "dataset_stats.json")
         
-        for model_name in tqdm(self.model_versions, desc="Training models"):
-            # Create a separate run for each model
-            with mlflow.start_run(run_name=f"{self.experiment_name}_{model_name}", nested=True):
-                try:
-                    # Check if model is already trained
-                    model_dir = self.output_dir / f"{model_name}_training"
-                    last_model_path = model_dir / "weights/last.pt"
-                    is_trained = last_model_path.exists()
-                    # Load model
-                    model = YOLO(f"./models/{model_name}.pt")
-                    params, flops = self._get_model_info(model)
-                    self.model_info[model_name] = {
-                        "params": params,
-                        "flops": flops
-                    }
-                    # Log model info
-                    mlflow.log_params({
-                        "model_name": model_name,
-                        "parameters": params,
-                        "flops": flops
-                    })
+        for model_name in tqdm(self.model_versions, desc="Tuning and Training models"):
+            try:
+                # --- Stage 0: Get Base Model Info ---
+                # Load base model once for info, params will be logged in tune and final_train runs
+                temp_base_model = YOLO(f"./models/{model_name}.pt")
+                # Access the underlying PyTorch model for parameter counting
+                params, flops = self._get_model_info(temp_base_model.model) 
+                self.model_info[model_name] = {"params": params, "flops": flops}
+                del temp_base_model # Free memory
+
+                # --- Stage 1: Hyperparameter Tuning ---
+                tune_run_name_mlflow = f"{self.experiment_name}_{model_name}_tuning"
+                with mlflow.start_run(run_name=tune_run_name_mlflow, nested=True, description=f"Hyperparameter tuning for {model_name}") as tune_run:
+                    mlflow.log_params({"model_name": model_name, "parameters": params, "flops": flops})
+
+                    tune_project_dir = self.output_dir / f"tuning_runs_{model_name}" # Main project dir for all tuning outputs
+                    tune_run_name_disk = f"{model_name}_tune" # Specific name for this model's tune results on disk
                     
-                    if not is_trained:
-                        # Train model for 200 epochs with evaluation every 10 epochs
-                        results = model.train(
+                    best_hyp_path = tune_project_dir / tune_run_name_disk / "best_hyperparameters.yaml"
+
+                    if not best_hyp_path.exists():
+                        logger.info(f"Starting hyperparameter tuning for {model_name} (only lr0, lrf)...")
+                        tune_model = YOLO(f"./models/{model_name}.pt") # Fresh model instance for tuning
+                        
+                        # Define hyperparameters to keep fixed during tuning trials
+                        # These values are taken from your default train_args for consistency
+                        fixed_params_for_tune = {
+                            "batch": 4, 
+                            "momentum": 0.9,
+                            "weight_decay": 0.0005,
+                            "warmup_epochs": 3,
+                            "warmup_momentum": 0.8,
+                            "warmup_bias_lr": 0.1,
+                            "box": 7.5,
+                            "cls": 0.5,
+                            "dfl": 1.5,
+                            "hsv_h": 0.015,
+                            "hsv_s": 0.7,
+                            "hsv_v": 0.4,
+                            "degrees": 0.0,
+                            "translate": 0.1,
+                            "scale": 0.5,
+                            "shear": 0.0,
+                            "perspective": 0.0,
+                            "flipud": 0.0,
+                            "fliplr": 0.5,
+                            "mosaic": 1.0,
+                            "mixup": 0.0,
+                            "copy_paste": 0.0,
+                            "close_mosaic": 10, # This influences how mosaic is applied during training
+                            "amp": False,
+                            "fraction": 1.0,
+                            "profile": False,
+                            "verbose": False # Suppress verbose output for each tuning trial
+                            # lr0 and lrf are intentionally omitted to allow the tuner to vary them.
+                        }
+
+                        tune_model.tune(
                             data=str(self.dataset_path / "dataset.yaml"),
-                            epochs=200,
+                            epochs=50,  # Epochs for each tuning trial
+                            iterations=100, # Number of hyperparameter sets to try
+                            optimizer='AdamW', # Optimizer for tuning trials
+                            plots=True,    # Generate plots for tuning process
+                            save=True,     # Save best_hyperparameters.yaml and models
+                            val=True,      # Essential for fitness calculation
+                            device="2,3",
                             imgsz=320,
-                            batch=4,
-                            device="4,5",
-                            lr0=0.001,
-                            lrf=0.1,
-                            momentum=0.9,
-                            weight_decay=0.0005,
-                            warmup_epochs=3,
-                            warmup_momentum=0.8,
-                            warmup_bias_lr=0.1,
-                            box=7.5,
-                            cls=0.5,
-                            dfl=1.5,
-                            val=True,
-                            save=True,
-                            save_period=10,  # Save model every 10 epochs
-                            plots=True,
-                            verbose=False,
-                            project=str(self.output_dir),
-                            name=f"{model_name}_training",
+                            project=str(tune_project_dir),
+                            name=tune_run_name_disk,
                             exist_ok=True,
-                            pretrained=True,
-                            optimizer='AdamW',
-                            close_mosaic=10,
-                            resume=False,
-                            amp=False,
-                            fraction=1.0,
-                            profile=False,
-                            # Data augmentation parameters
-                            hsv_h=0.015,
-                            hsv_s=0.7,
-                            hsv_v=0.4,
-                            degrees=0.0,
-                            translate=0.1,
-                            scale=0.5,
-                            shear=0.0,
-                            perspective=0.0,
-                            flipud=0.0,
-                            fliplr=0.5,
-                            mosaic=1.0,
-                            mixup=0.0,
-                            copy_paste=0.0
+                            **fixed_params_for_tune # Pass fixed hyperparameters here
                         )
+                        
+                        # Log tuning artifacts to MLflow
+                        if best_hyp_path.exists():
+                            mlflow.log_artifact(str(best_hyp_path))
+                        
+                        # Define paths for other tuning artifacts relative to tune_project_dir/tune_run_name_disk
+                        artifacts_to_log = {
+                            "tune_results.csv": tune_project_dir / tune_run_name_disk / "tune_results.csv",
+                            "tune_scatter_plots.png": tune_project_dir / tune_run_name_disk / "tune_scatter_plots.png",
+                            "best_fitness.png": tune_project_dir / tune_run_name_disk / "best_fitness.png"
+                        }
+                        for key, path in artifacts_to_log.items():
+                            if path.exists():
+                                mlflow.log_artifact(str(path))
+                            else:
+                                logger.warning(f"Tuning artifact {key} not found at {path}")
                     else:
-                        self.logger.info(f"Model {model_name} already trained, skipping training step")
+                        logger.info(f"Found existing best hyperparameters for {model_name} at {best_hyp_path}.")
+                        if best_hyp_path.exists(): # Log if skipped but exists
+                           mlflow.log_artifact(str(best_hyp_path))
+
+
+                # --- Stage 2: Final Training with Best Hyperparameters ---
+                final_train_run_name_mlflow = f"{self.experiment_name}_{model_name}_final_train"
+                with mlflow.start_run(run_name=final_train_run_name_mlflow, nested=True, description=f"Final training for {model_name} with tuned hyperparameters") as final_train_run:
+                    mlflow.log_params({"model_name": model_name, "parameters": params, "flops": flops})
+                    if best_hyp_path.exists():
+                        mlflow.log_param("hyperparameters_file", str(best_hyp_path.name)) # Log filename
+                        mlflow.log_artifact(str(best_hyp_path)) # Log the file itself again for this run if desired
+
+                    final_model_project_dir_disk = self.output_dir / "final_trained_models"
+                    final_model_run_name_disk = f"{model_name}_final"
                     
-                    # Evaluate at every 10 epochs
+                    final_model_weights_dir = final_model_project_dir_disk / final_model_run_name_disk / "weights"
+                    
+                    if not (final_model_weights_dir / "last.pt").exists():
+                        logger.info(f"Starting final training for {model_name} using {'best tuned' if best_hyp_path.exists() else 'default'} hyperparameters...")
+                        model_for_final_training = YOLO(f"./models/{model_name}.pt") # Fresh model
+                        
+                        train_args = {
+                            "data": str(self.dataset_path / "dataset.yaml"), "epochs": 200, "imgsz": 320,
+                            "batch": 4, "device": "2,3", "val": True, "save": True, "save_period": 10,
+                            "plots": True, "verbose": False, "project": str(final_model_project_dir_disk),
+                            "name": final_model_run_name_disk, "exist_ok": True, "pretrained": True,
+                            "optimizer": 'AdamW', "close_mosaic": 10, "resume": False, "amp": False,
+                            "fraction": 1.0, "profile": False,
+                            # Default hyperparameters from your original script, these will be overridden by `hyp` if specified
+                            "lr0": 0.001, "lrf": 0.1, "momentum": 0.9, "weight_decay": 0.0005,
+                            "warmup_epochs": 3, "warmup_momentum": 0.8, "warmup_bias_lr": 0.1,
+                            "box": 7.5, "cls": 0.5, "dfl": 1.5,
+                            "hsv_h": 0.015, "hsv_s": 0.7, "hsv_v": 0.4, "degrees": 0.0, "translate": 0.1,
+                            "scale": 0.5, "shear": 0.0, "perspective": 0.0, "flipud": 0.0, "fliplr": 0.5,
+                            "mosaic": 1.0, "mixup": 0.0, "copy_paste": 0.0
+                        }
+
+                        if best_hyp_path.exists():
+                            train_args["hyp"] = str(best_hyp_path)
+                            logger.info(f"Using tuned hyperparameters from: {best_hyp_path}")
+                        else:
+                            logger.info("No tuned hyperparameters found, using default training arguments.")
+                        
+                        model_for_final_training.train(**train_args)
+                    else:
+                        logger.info(f"Final model for {model_name} (path: {final_model_weights_dir}) already trained. Skipping training.")
+
+                    # --- Stage 3: Evaluation of the Final Trained Model ---
+                    logger.info(f"Evaluating final trained model for {model_name} from {final_model_weights_dir}...")
+                    # Evaluate epoch-wise as per original script
                     for epoch in range(10, 201, 10):
-                        # Load the saved model for this epoch
-                        epoch_model_path = self.output_dir / f"{model_name}_training" / f"weights/epoch{epoch}.pt"
-                        if epoch == 200:
-                            epoch_model_path = self.output_dir / f"{model_name}_training" / f"weights/last.pt"
-                        self.logger.info(f"Epoch model path: {epoch_model_path}")
-                        if epoch_model_path.exists():
-                            epoch_model = YOLO(str(epoch_model_path))
-                            
-                            # Evaluate on test set with save=False to prevent creating val folders
-                            metrics = epoch_model.val(
+                        current_epoch_model_path = final_model_weights_dir / f"epoch{epoch}.pt"
+                        if epoch == 200: # 'last.pt' is the state at the end of the final epoch
+                            current_epoch_model_path = final_model_weights_dir / "last.pt"
+                        
+                        if current_epoch_model_path.exists():
+                            eval_model = YOLO(str(current_epoch_model_path))
+                            metrics = eval_model.val(
                                 data=str(self.dataset_path / "dataset.yaml"),
-                                split='test',
-                                plots=True,
-                                save=False  # Prevent creating val folders
+                                split='test', plots=False, # Plots for val can be disabled if not needed per epoch
+                                save=False, device="2,3", imgsz=320, batch=train_args.get("batch",4) # Use consistent batch for val
                             )
 
-                            # Log metrics
                             mlflow.log_metrics({
-                                "mAP50": metrics.box.map50,
-                                "mAP75": metrics.box.map75,
-                                "mAP50_95": metrics.box.map,
-                                "inference_time": metrics.speed['inference']
+                                "mAP50": metrics.box.map50, "mAP75": metrics.box.map75,
+                                "mAP50_95": metrics.box.map, "inference_time": metrics.speed['inference']
                             }, step=epoch)
                             
-                            # Store results
                             self.results['mAP50'].loc[model_name, epoch] = metrics.box.map50
                             self.results['mAP75'].loc[model_name, epoch] = metrics.box.map75
                             self.results['mAP50_95'].loc[model_name, epoch] = metrics.box.map
                             self.results['inference_time'].loc[model_name, epoch] = metrics.speed['inference']
                             
-                            self.logger.info(f"Epoch {epoch} evaluation for {model_name}:")
-                            self.logger.info(f"mAP50: {metrics.box.map50:.3f}")
-                            self.logger.info(f"mAP75: {metrics.box.map75:.3f}")
-                            self.logger.info(f"mAP50_95: {metrics.box.map:.3f}")
-                            self.logger.info(f"Inference time: {metrics.speed['inference']:.2f}s")
+                            logger.info(f"Epoch {epoch} (final train) eval for {model_name}: mAP50={metrics.box.map50:.3f}, mAP50-95={metrics.box.map:.3f}, Time={metrics.speed['inference']:.2f}ms")
                         else:
-                            self.logger.warning(f"Model checkpoint not found for epoch {epoch} and epoch_model_path: {epoch_model_path}")
+                            logger.warning(f"Final train model checkpoint not found for epoch {epoch}: {current_epoch_model_path}")
                     
-                except Exception as e:
-                    self.logger.error(f"Error training {model_name}: {str(e)}")
-                    continue
+                    # Optionally, evaluate the 'best.pt' from final training if it's different from 'last.pt'
+                    best_pt_path = final_model_weights_dir / "best.pt"
+                    if best_pt_path.exists() and best_pt_path != current_epoch_model_path: # if best.pt is not last.pt (final epoch)
+                        logger.info(f"Evaluating best.pt from final training for {model_name}...")
+                        eval_model_best = YOLO(str(best_pt_path))
+                        metrics_best = eval_model_best.val(
+                            data=str(self.dataset_path / "dataset.yaml"),
+                            split='test', plots=False, save=False, device="2,3", imgsz=320, batch=train_args.get("batch",4)
+                        )
+                        mlflow.log_metrics({ # Log with a special step or tag
+                            "best_pt_mAP50": metrics_best.box.map50, "best_pt_mAP75": metrics_best.box.map75,
+                            "best_pt_mAP50_95": metrics_best.box.map, "best_pt_inference_time": metrics_best.speed['inference']
+                        })
+                        logger.info(f"Best.pt (final train) eval for {model_name}: mAP50={metrics_best.box.map50:.3f}, mAP50-95={metrics_best.box.map:.3f}")
+
+
+            except Exception as e:
+                logger.error(f"Error during full process for {model_name}: {str(e)}")
+                if mlflow.active_run(): # Ensure current run is ended if an error occurs
+                    mlflow.end_run(status="FAILED")
+                continue
         
-        # Create and save heatmaps
-        self._create_heatmaps()
+        # Create and save heatmaps (uses self.results populated from final_train evaluations)
+        # Ensure this is called within an MLflow run if heatmaps are to be logged as artifacts,
+        # e.g., the overview run, or log them separately.
+        # For now, it saves locally. If you want them in overview run, move this call or log them there.
+        with mlflow.start_run(run_name=f"{self.experiment_name}_overview", TBD_if_needed_reattach=True): # Re-open or ensure overview run is active
+             self._create_heatmaps()
+
 
     def _create_heatmaps(self):
         """Create heatmaps for each metric with model parameters and FLOPs"""
@@ -420,7 +490,7 @@ class YOLOExperiment:
         
         if is_single_model_case and first_non_empty_df_for_columns is not None:
             single_model_name = list(all_model_names)[0]
-            self.logger.info(f"Single model case detected: {single_model_name}. Generating combined metrics heatmap.")
+            logger.info(f"Single model case detected: {single_model_name}. Generating combined metrics heatmap.")
 
             data_for_heatmap = {}
             common_epochs = first_non_empty_df_for_columns.columns.tolist()
@@ -432,7 +502,7 @@ class YOLOExperiment:
                     data_for_heatmap[metric] = metric_series
             
             if not data_for_heatmap:
-                self.logger.warning(f"No data found for single model {single_model_name} to create combined heatmap.")
+                logger.warning(f"No data found for single model {single_model_name} to create combined heatmap.")
                 # Fallback to original behavior or simply return
                 # For now, let's try to make sure the original loop doesn't run if this was triggered.
                 # However, if data_for_heatmap is empty, maybe we should let the original loop try.
@@ -441,18 +511,18 @@ class YOLOExperiment:
                 # This needs careful handling if no data means use old method.
                 # For now, if it's a single model name, it *must* be plotted this way or not at all.
                 if not data_for_heatmap:
-                    self.logger.warning(f"No metric data for {single_model_name}, cannot create combined heatmap.")
+                    logger.warning(f"No metric data for {single_model_name}, cannot create combined heatmap.")
                     return
 
 
             combined_heatmap_df = pd.DataFrame(data_for_heatmap) # Metrics are columns, epochs are index
             if combined_heatmap_df.empty:
-                self.logger.warning(f"Combined DataFrame for {single_model_name} is empty. Skipping heatmap.")
+                logger.warning(f"Combined DataFrame for {single_model_name} is empty. Skipping heatmap.")
                 return
             combined_heatmap_df = combined_heatmap_df.T # Metrics are rows, epochs are columns
 
             if combined_heatmap_df.empty: # Check again after transpose
-                self.logger.warning(f"Transposed combined DataFrame for {single_model_name} is empty. Skipping heatmap.")
+                logger.warning(f"Transposed combined DataFrame for {single_model_name} is empty. Skipping heatmap.")
                 return
 
             num_epochs = len(common_epochs)
@@ -493,12 +563,12 @@ class YOLOExperiment:
                 plt.tight_layout()
                 save_path = self.output_dir / f"{single_model_name}_combined_metrics_heatmap.png"
                 plt.savefig(save_path, dpi=300, bbox_inches='tight', format='png')
-                if  hasattr(self, 'mlflow_run') and self.mlflow_run: # Check if mlflow run is active
+                if mlflow.active_run(): # Check if mlflow run is active
                     mlflow.log_artifact(str(save_path))
-                self.logger.info(f"Saved combined heatmap for {single_model_name} to {save_path}")
+                logger.info(f"Saved combined heatmap for {single_model_name} to {save_path}")
                 
             except Exception as e:
-                self.logger.error(f"Error creating combined heatmap for {single_model_name}: {str(e)}")
+                logger.error(f"Error creating combined heatmap for {single_model_name}: {str(e)}")
             finally:
                 plt.close()
             return # Important: return after handling the single model case
@@ -507,7 +577,7 @@ class YOLOExperiment:
         for metric, df in self.results.items():
             # Skip if dataframe is empty
             if df.empty:
-                self.logger.warning(f"No data available for {metric} heatmap")
+                logger.warning(f"No data available for {metric} heatmap")
                 continue
                 
             plt.figure(figsize=(20, 12))  # 更大的图像尺寸
@@ -535,7 +605,7 @@ class YOLOExperiment:
                         params_line = f"({params_str} params, {flops_str} FLOPs)".center(40)
                         y_labels.append(f"{model_line}\n{params_line}")
                     except Exception as e:
-                        self.logger.warning(f"Failed to get model info for {model_name}: {str(e)}")
+                        logger.warning(f"Failed to get model info for {model_name}: {str(e)}")
                         y_labels.append(model_name)
                 
                 # 标题和轴标签
@@ -558,11 +628,11 @@ class YOLOExperiment:
                     bbox_inches='tight',
                     format='png'
                 )
-                if hasattr(self, 'mlflow_run') and self.mlflow_run: # Check if mlflow_run attribute exists and is active
+                if mlflow.active_run(): # Check if mlflow run is active
                     mlflow.log_artifact(str(self.output_dir / f"{metric}_heatmap.png"))
                 
             except Exception as e:
-                self.logger.error(f"Error creating heatmap for {metric}: {str(e)}")
+                logger.error(f"Error creating heatmap for {metric}: {str(e)}")
             finally:
                 plt.close()
 
@@ -575,33 +645,23 @@ class YOLOExperiment:
             mlflow.get_experiment_by_name(self.experiment_name) #This might create if not exists with some backends
             return True
         except Exception as e:
-            self.logger.error(f"MLflow connection error: {str(e)}")
+            logger.error(f"MLflow connection error: {str(e)}")
             return False
 
     def _handle_mlflow_error(self):
         # Ensure MLflow run is ended
-        if hasattr(self, 'mlflow_run') and self.mlflow_run:
+        if mlflow.active_run():
             try:
                 mlflow.end_run()
             except Exception as e:
-                self.logger.warning(f"Error ending MLflow run: {str(e)}")
+                logger.warning(f"Error ending MLflow run: {str(e)}")
 
 def main():
-    parser = argparse.ArgumentParser(description="Train YOLO experiments with config file.")
-    parser.add_argument('--config_path', type=str, default="config/config.yaml", help="Path to config YAML file.")
-    args = parser.parse_args()
-    config = load_config(args.config_path)
-    dataset_root = config.dataset_root
-    output_root = config.output_root
-    log_root = config.log_root
-    logger = setup_logger(log_root)
-    logger.info(f"Loaded config: {config}")
-
     # Create experiments
     experiments = [
-        YOLOExperiment("multiclass_detect", f"{dataset_root}/annotations_ultralytics", output_root, logger),
-        YOLOExperiment("singleclass_detect", f"{dataset_root}/single_class_dataset", output_root, logger),
-        YOLOExperiment("overfit_experiment", f"{dataset_root}/train_equal_test", output_root, logger)
+        # YOLOExperiment("multiclass_detect", "dataset/label_data_dataset"),
+        YOLOExperiment("singleclass_detect", "dataset/label_data_dataset",single_class=True),
+        YOLOExperiment("overfit_experiment", "dataset/overfit_label_data_dataset")
     ]
     
     # Run experiments
@@ -620,5 +680,13 @@ def main():
                 logger.warning(f"Error ending MLflow run: {str(e)}")
 
 if __name__ == "__main__":
+    # Add a check for MLflow run status before calling main operations
+    # This is a simplified example; a robust solution might involve a global MLflow utility
+    # For YOLOExperiment, mlflow is initialized in __init__
+    
+    # Example:
+    # if not YOLOExperiment._check_mlflow_connection_static(): # A static method if needed before __init__
+    #     logger.error("MLflow is not available. Exiting.")
+    #     # sys.exit(1) # Or handle gracefully
     
     main() 
